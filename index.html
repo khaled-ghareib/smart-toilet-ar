@@ -4,84 +4,214 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Icon Smart Toilet</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Use model-viewer for iOS compatibility -->
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { margin: 0; overflow: hidden; font-family: -apple-system, sans-serif; background: #000; color: white; height: 100vh; }
         
-        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; background: rgba(0,0,0,0.7); padding: 20px; border-radius: 15px; }
-        .loading-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #007bff; animation: spin 1s ease-in-out infinite; margin: 0 auto 15px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        body { 
+            margin: 0; 
+            font-family: -apple-system, sans-serif; 
+            background: #000; 
+            color: white; 
+            height: 100vh;
+            overflow: hidden;
+        }
         
-        .controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; width: 90%; max-width: 400px; z-index: 100; padding: 15px; background: rgba(20,20,20,0.7); backdrop-filter: blur(20px); border-radius: 20px; display: none; }
+        model-viewer {
+            width: 100vw;
+            height: 100vh;
+            background: #1a1a1a;
+        }
         
-        button { padding: 14px 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(40,40,40,0.9); color: white; font-weight: 600; font-size: 13px; cursor: pointer; min-height: 50px; }
-        button.on { background: linear-gradient(135deg, #007bff, #0056cc); border-color: #007bff; }
-        button.off { background: rgba(40,40,40,0.9); }
+        .controls {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            width: 90%;
+            max-width: 400px;
+            z-index: 100;
+            padding: 15px;
+            background: rgba(20, 20, 20, 0.7);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
         
-        .status-indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; background: #ff4444; }
-        button.on .status-indicator { background: #44ff44; }
+        button {
+            padding: 14px 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(40, 40, 40, 0.9);
+            color: white;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            min-height: 50px;
+            transition: all 0.2s;
+        }
         
-        canvas { display: block; width: 100vw; height: 100vh; }
+        button:hover {
+            background: rgba(60, 60, 60, 0.9);
+        }
         
-        #arButton { position: absolute; top: 20px; right: 20px; background: linear-gradient(135deg, #28a745, #20c997); color: white; padding: 12px 24px; border-radius: 25px; border: none; font-weight: bold; cursor: pointer; z-index: 100; display: none; }
+        button.on {
+            background: linear-gradient(135deg, #007bff, #0056cc);
+            border-color: #007bff;
+        }
         
-        .title-bar { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 12px 24px; border-radius: 12px; text-align: center; z-index: 50; max-width: 90%; display: none; }
-        .title-bar h1 { font-size: 18px; font-weight: 600; color: white; margin: 0; }
+        button.off {
+            background: rgba(40, 40, 40, 0.9);
+        }
         
-        /* iOS AR Modal */
-        #iosARModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; }
-        .modal-content { background: #1a1a1a; padding: 30px; border-radius: 20px; max-width: 90%; text-align: center; }
-        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; justify-content: center; }
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+            background: #ff4444;
+        }
+        
+        button.on .status-indicator {
+            background: #44ff44;
+        }
+        
+        .title-bar {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 12px 24px;
+            border-radius: 12px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 50;
+            max-width: 90%;
+        }
+        
+        .title-bar h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            margin: 0;
+        }
+        
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 15px;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #007bff;
+            animation: spin 1s ease-in-out infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* AR button styled to match iOS */
+        .ar-button {
+            position: absolute !important;
+            top: 20px !important;
+            right: 20px !important;
+            background: rgba(255, 255, 255, 0.9) !important;
+            color: #000 !important;
+            padding: 12px 24px !important;
+            border-radius: 25px !important;
+            font-weight: bold !important;
+            border: none !important;
+            backdrop-filter: blur(10px) !important;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2) !important;
+            z-index: 1000 !important;
+        }
         
         @media (max-width: 768px) {
-            .controls { bottom: 20px; padding: 12px; }
-            button { font-size: 12px; padding: 12px 8px; min-height: 45px; }
-            #arButton, .title-bar { top: 10px; padding: 10px 20px; }
-            .title-bar h1 { font-size: 16px; }
-            #arButton { right: 10px; font-size: 14px; }
+            .controls {
+                bottom: 20px;
+                padding: 12px;
+            }
+            
+            button {
+                font-size: 12px;
+                padding: 12px 8px;
+                min-height: 45px;
+            }
+            
+            .title-bar {
+                top: 10px;
+                padding: 10px 20px;
+            }
+            
+            .title-bar h1 {
+                font-size: 16px;
+            }
+            
+            .ar-button {
+                top: 10px !important;
+                right: 10px !important;
+                padding: 10px 20px !important;
+                font-size: 14px !important;
+            }
         }
     </style>
 </head>
 <body>
 
-<!-- iOS AR Modal -->
-<div id="iosARModal">
-    <div class="modal-content">
-        <h2>AR on iPhone</h2>
-        <p style="margin: 15px 0; line-height: 1.5;">To view in AR on iPhone:</p>
-        
-        <div style="text-align: left; margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 10px;">
-            <p style="margin: 10px 0;"><strong>Option 1: Direct AR (Recommended)</strong></p>
-            <p style="margin: 5px 0; font-size: 14px; color: #aaa;">Click the AR button below to open directly in AR</p>
-            
-            <p style="margin: 20px 0 10px 0;"><strong>Option 2: Download First</strong></p>
-            <p style="margin: 5px 0; font-size: 14px; color: #aaa;">1. Download USDZ file</p>
-            <p style="margin: 5px 0; font-size: 14px; color: #aaa;">2. Open in Files app</p>
-            <p style="margin: 5px 0; font-size: 14px; color: #aaa;">3. Tap AR button in Files</p>
-        </div>
-        
-        <div class="modal-buttons">
-            <button id="openDirectAR" style="background: #28a745;">Open AR Now</button>
-            <button id="downloadUSDZ" style="background: #007bff;">Download USDZ</button>
-            <button id="closeModal" style="background: #6c757d;">Cancel</button>
-        </div>
+<model-viewer 
+    id="toilet"
+    src="toilet_final.glb"
+    ar
+    ar-modes="scene-viewer quick-look webxr"
+    camera-controls
+    touch-action="pan-y"
+    shadow-intensity="2"
+    exposure="1"
+    environment-image="neutral"
+    auto-rotate
+    camera-orbit="45deg 55deg 2.5m"
+    ar-scale="fixed"
+    ar-placement="floor"
+    style="width: 100%; height: 100%;"
+    
+    <!-- iOS specific attributes -->
+    ios-src="toilet_final.glb"
+    xr-environment
+>
+    
+    <!-- Title -->
+    <div class="title-bar" slot="ar-button">
+        <h1>Icon Smart Toilet</h1>
     </div>
-</div>
+    
+    <!-- Loading overlay -->
+    <div id="loading" slot="poster">
+        <div class="loading-spinner"></div>
+        <p>Loading Smart Toilet...</p>
+    </div>
+    
+</model-viewer>
 
-<button id="arButton">View in AR 👁️</button>
-
-<div class="title-bar">
-    <h1>Icon Smart Toilet</h1>
-</div>
-
-<div id="loading">
-    <div class="loading-spinner"></div>
-    <p>Loading Icon Smart Toilet...</p>
-</div>
-
+<!-- Controls overlay -->
 <div class="controls">
     <button id="btn-CoverAction" data-animation="CoverAction">
         <span class="status-indicator"></span>Cover
@@ -100,312 +230,104 @@
     </button>
 </div>
 
-<script>
-    // Simple device detection
-    function isIOS() {
-        return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    }
+<script type="module">
+    const modelViewer = document.querySelector('#toilet');
+    const loading = document.getElementById('loading');
     
-    // Simple scene setup
-    let scene, camera, renderer, controls, mixer, model;
-    
+    // Animation states
     const animationStates = {
-        'CoverAction': { isOpen: false, action: null },
-        'SeatAction': { isOpen: false, action: null },
-        'BidetAction': { isOpen: false, action: null },
-        'AirventAction': { isOpen: false, action: null }
+        'CoverAction': { isOpen: false },
+        'SeatAction': { isOpen: false },
+        'BidetAction': { isOpen: false },
+        'AirventAction': { isOpen: false }
     };
     
-    function init() {
-        // Create scene
-        scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x1a1a1a);
+    // Animation durations (you may need to adjust these)
+    const animationDurations = {
+        'CoverAction': 1000,
+        'SeatAction': 800,
+        'BidetAction': 1500, // Longer for bidet sequence
+        'AirventAction': 1200
+    };
+    
+    // Wait for model to load
+    modelViewer.addEventListener('load', () => {
+        console.log('Model loaded');
+        loading.style.display = 'none';
         
-        // Create camera
-        camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(3, 2, 5);
+        // Get available animations
+        const animations = modelViewer.availableAnimations || [];
+        console.log('Available animations:', animations);
         
-        // Create renderer
-        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        document.body.appendChild(renderer.domElement);
-        
-        // Add orbit controls
-        controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.target.set(0, 0.5, 0);
-        
-        // Add lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        scene.add(ambientLight);
-        
-        const mainLight = new THREE.DirectionalLight(0xffffff, 1.0);
-        mainLight.position.set(5, 8, 5);
-        scene.add(mainLight);
-        
-        // Load the 3D model
-        loadModel();
-        
-        // Setup AR button
-        setupARButton();
-        
-        // Start animation loop
-        animate();
-        
-        // Handle window resize
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+        // Setup button listeners
+        document.querySelectorAll('[data-animation]').forEach(button => {
+            const animationName = button.getAttribute('data-animation');
+            button.addEventListener('click', () => toggleAnimation(animationName));
         });
-    }
+        
+        // Reset button
+        document.getElementById('btn-Reset').addEventListener('click', resetAll);
+        
+        // Initialize button states
+        updateAllButtons();
+    });
     
-    function loadModel() {
-        const loader = new THREE.GLTFLoader();
-        
-        // Try different paths for the GLB file
-        const possiblePaths = [
-            'toilet_final.glb',
-            './toilet_final.glb',
-            'models/toilet_final.glb',
-            './models/toilet_final.glb'
-        ];
-        
-        let currentPathIndex = 0;
-        
-        function tryLoad(path) {
-            console.log('Trying to load from:', path);
-            
-            loader.load(
-                path,
-                (gltf) => {
-                    model = gltf.scene;
-                    
-                    // Center the model
-                    const box = new THREE.Box3().setFromObject(model);
-                    const center = box.getCenter(new THREE.Vector3());
-                    const size = box.getSize(new THREE.Vector3());
-                    
-                    model.position.x = -center.x;
-                    model.position.y = -center.y + (size.y / 2);
-                    model.position.z = -center.z;
-                    
-                    scene.add(model);
-                    
-                    // Setup animations if available
-                    if (gltf.animations && gltf.animations.length > 0) {
-                        mixer = new THREE.AnimationMixer(model);
-                        
-                        gltf.animations.forEach(clip => {
-                            const name = clip.name;
-                            if (animationStates[name]) {
-                                animationStates[name].action = mixer.clipAction(clip);
-                                animationStates[name].action.play();
-                                animationStates[name].action.paused = true;
-                                animationStates[name].action.time = 0;
-                            }
-                        });
-                    }
-                    
-                    // Hide loading, show UI
-                    document.getElementById('loading').style.display = 'none';
-                    document.querySelector('.controls').style.display = 'grid';
-                    document.querySelector('.title-bar').style.display = 'block';
-                    
-                    console.log('Model loaded successfully from:', path);
-                },
-                (xhr) => {
-                    // Loading progress
-                    const percent = (xhr.loaded / xhr.total * 100).toFixed(2);
-                    document.getElementById('loading').querySelector('p').textContent = `Loading: ${percent}%`;
-                },
-                (error) => {
-                    console.error('Error loading from', path, ':', error);
-                    
-                    // Try next path
-                    currentPathIndex++;
-                    if (currentPathIndex < possiblePaths.length) {
-                        tryLoad(possiblePaths[currentPathIndex]);
-                    } else {
-                        // All paths failed
-                        document.getElementById('loading').innerHTML = `
-                            <div style="color: #ff6b6b; margin-bottom: 15px;">⚠️ Error loading model</div>
-                            <p style="font-size: 12px; margin-bottom: 10px;">Tried paths: ${possiblePaths.join(', ')}</p>
-                            <p style="font-size: 12px;">Make sure toilet_final.glb is in the same folder as this HTML file</p>
-                        `;
-                    }
-                }
-            );
-        }
-        
-        // Start trying to load
-        tryLoad(possiblePaths[0]);
-    }
+    // Handle errors
+    modelViewer.addEventListener('error', (error) => {
+        console.error('Model error:', error);
+        loading.innerHTML = `
+            <div style="color: #ff6b6b; margin-bottom: 15px;">⚠️ Error loading model</div>
+            <p style="font-size: 12px;">Make sure toilet_final.glb is in the same folder</p>
+        `;
+    });
     
-    function setupARButton() {
-        const arButton = document.getElementById('arButton');
-        const isIOSDevice = isIOS();
-        
-        // Show AR button for iOS and other devices with WebXR
-        if (isIOSDevice || ('xr' in navigator)) {
-            arButton.style.display = 'block';
-            
-            if (isIOSDevice) {
-                // iOS - show modal with options
-                arButton.onclick = showIOSARModal;
-            } else {
-                // Non-iOS devices
-                if ('xr' in navigator) {
-                    navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
-                        if (supported) {
-                            arButton.onclick = () => {
-                                alert('For WebXR AR (Android/Desktop):\n\n1. Use Chrome browser\n2. Visit via HTTPS (not file://)\n3. Grant camera permissions\n\nURL must start with https://');
-                            };
-                        } else {
-                            arButton.onclick = () => {
-                                alert('WebXR AR not supported on this device.\n\nFor iPhone: Use Safari with USDZ file');
-                            };
-                        }
-                    });
-                }
-            }
-        }
-    }
-    
-    function showIOSARModal() {
-        const modal = document.getElementById('iosARModal');
-        modal.style.display = 'flex';
-        
-        // Setup modal buttons
-        document.getElementById('openDirectAR').onclick = () => {
-            openDirectAR();
-            modal.style.display = 'none';
-        };
-        
-        document.getElementById('downloadUSDZ').onclick = () => {
-            downloadUSDZ();
-            modal.style.display = 'none';
-        };
-        
-        document.getElementById('closeModal').onclick = () => {
-            modal.style.display = 'none';
-        };
-    }
-    
-    function openDirectAR() {
-        // Create a proper AR link with all necessary attributes
-        const arLink = document.createElement('a');
-        
-        // Try different paths for USDZ file
-        const usdzPaths = [
-            'toilet_final.usdz',
-            './toilet_final.usdz',
-            'models/toilet_final.usdz',
-            './models/toilet_final.usdz'
-        ];
-        
-        // Create a temporary div to test which file exists
-        let foundPath = null;
-        for (const path of usdzPaths) {
-            const testLink = document.createElement('a');
-            testLink.href = path;
-            testLink.onerror = () => console.log('Path not found:', path);
-            // We'll assume first path is correct for now
-            foundPath = path;
-            break;
-        }
-        
-        if (foundPath) {
-            arLink.href = foundPath;
-            arLink.setAttribute('rel', 'ar');
-            arLink.setAttribute('alt', 'Icon Smart Toilet AR');
-            
-            // Add AR badge image (required for iOS)
-            const img = document.createElement('img');
-            img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMyOGE3NDUiLz4KPHBhdGggZD0iTTMyIDQ4QzI0LjggNDggMTkgNDIuMiAxOSAzNUMxOSAyNy44IDI0LjggMjIgMzIgMjJDMzkuMiAyMiA0NSAyNy44IDQ1IDM1QzQ1IDQyLjIgMzkuMiA0OCAzMiA0OFoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0zNi41IDM1QzM2LjUgMzcuNSAzNC41IDM5LjUgMzIgMzkuNUMyOS41IDM5LjUgMjcuNSAzNy41IDI3LjUgMzVDMjcuNSAzMi41IDI5LjUgMzAuNSAzMiAzMC41QzM0LjUgMzAuNSAzNi41IDMyLjUgMzYuNSAzNVoiIGZpbGw9IiMyOGE3NDUiLz4KPC9zdmc+Cg==';
-            img.style.width = '64px';
-            img.style.height = '64px';
-            img.alt = 'AR';
-            
-            arLink.appendChild(img);
-            arLink.style.display = 'none';
-            
-            document.body.appendChild(arLink);
-            
-            // Try to trigger AR
-            arLink.click();
-            
-            // Show message if nothing happens after 1 second
-            setTimeout(() => {
-                alert('If AR didn\'t open:\n\n1. Make sure toilet_final.usdz is in the same folder\n2. Try downloading the USDZ file first\n3. Open the downloaded file in Files app\n4. Tap the AR button in Files');
-            }, 1000);
-            
-            // Clean up
-            setTimeout(() => {
-                document.body.removeChild(arLink);
-            }, 2000);
-        } else {
-            alert('USDZ file not found.\n\nPlease make sure toilet_final.usdz is in the same folder as this HTML file.');
-        }
-    }
-    
-    function downloadUSDZ() {
-        // Create download link for USDZ
-        const downloadLink = document.createElement('a');
-        downloadLink.href = 'toilet_final.usdz';
-        downloadLink.download = 'Icon_Smart_Toilet.usdz';
-        downloadLink.style.display = 'none';
-        document.body.appendChild(downloadLink);
-        
-        // Trigger download
-        downloadLink.click();
-        
-        // Clean up
-        setTimeout(() => {
-            document.body.removeChild(downloadLink);
-        }, 100);
-        
-        // Show instructions
-        alert('USDZ file downloading...\n\nAfter download:\n1. Open Files app\n2. Find "Icon_Smart_Toilet.usdz"\n3. Tap the file\n4. Tap the AR button (cube icon) in top right');
-    }
-    
+    // Toggle animation
     function toggleAnimation(animationName) {
         const state = animationStates[animationName];
-        if (!state || !state.action) {
-            console.warn(`Animation "${animationName}" not found`);
-            return;
-        }
+        if (!state) return;
         
+        // Toggle state
         state.isOpen = !state.isOpen;
+        
+        // Update button
         updateButton(animationName);
         
-        // Play animation forward or backward
-        state.action.paused = false;
-        state.action.timeScale = state.isOpen ? 1 : -1;
-        state.action.clampWhenFinished = true;
-        state.action.loop = THREE.LoopOnce;
+        // Play the animation
+        playAnimation(animationName, state.isOpen);
         
-        // Pause after animation completes
-        setTimeout(() => {
-            state.action.paused = true;
-        }, 500);
-        
-        // If closing cover, also close seat
+        // Special logic: if closing cover, also close seat
         if (animationName === 'CoverAction' && !state.isOpen) {
             const seatState = animationStates.SeatAction;
-            if (seatState && seatState.isOpen) {
+            if (seatState.isOpen) {
                 seatState.isOpen = false;
                 updateButton('SeatAction');
-                seatState.action.paused = false;
-                seatState.action.timeScale = -1;
-                setTimeout(() => {
-                    seatState.action.paused = true;
-                }, 500);
+                playAnimation('SeatAction', false);
             }
         }
     }
     
+    // Play animation
+    function playAnimation(animationName, playForward) {
+        // For model-viewer, we need to set the animation name and play it
+        modelViewer.animationName = animationName;
+        
+        if (playForward) {
+            // Play forward
+            modelViewer.play();
+        } else {
+            // Play in reverse (model-viewer doesn't directly support reverse,
+            // so we'll play normally and update the state)
+            modelViewer.play();
+        }
+        
+        // After animation duration, stop it
+        const duration = animationDurations[animationName] || 1000;
+        setTimeout(() => {
+            modelViewer.pause();
+        }, duration);
+    }
+    
+    // Update button appearance
     function updateButton(animationName) {
         const state = animationStates[animationName];
         const button = document.getElementById(`btn-${animationName}`);
@@ -426,41 +348,56 @@
         }
     }
     
-    function resetAll() {
+    // Update all buttons
+    function updateAllButtons() {
         Object.keys(animationStates).forEach(name => {
-            const state = animationStates[name];
-            state.isOpen = false;
-            if (state.action) {
-                state.action.paused = true;
-                state.action.time = 0;
-            }
             updateButton(name);
         });
     }
     
-    function animate() {
-        requestAnimationFrame(animate);
-        if (mixer) mixer.update(0.016);
-        controls.update();
-        renderer.render(scene, camera);
-    }
-    
-    // Initialize when page loads
-    window.addEventListener('DOMContentLoaded', () => {
-        // Setup button listeners
-        document.querySelectorAll('[data-animation]').forEach(button => {
-            if (button.id !== 'btn-Reset') {
-                button.addEventListener('click', () => {
-                    toggleAnimation(button.getAttribute('data-animation'));
-                });
-            }
+    // Reset all animations
+    function resetAll() {
+        Object.keys(animationStates).forEach(name => {
+            const state = animationStates[name];
+            state.isOpen = false;
+            updateButton(name);
         });
         
-        document.getElementById('btn-Reset').addEventListener('click', resetAll);
+        // Reset model viewer
+        modelViewer.time = 0;
+        modelViewer.pause();
         
-        // Initialize the app
-        init();
+        // Visual feedback
+        const resetBtn = document.getElementById('btn-Reset');
+        resetBtn.style.background = '#28a745';
+        setTimeout(() => {
+            resetBtn.style.background = '';
+        }, 300);
+    }
+    
+    // Handle AR status
+    modelViewer.addEventListener('ar-status', (event) => {
+        console.log('AR status:', event.detail.status);
+        
+        if (event.detail.status === 'session-started') {
+            // In AR mode, adjust controls
+            document.querySelector('.controls').style.bottom = '20px';
+        } else if (event.detail.status === 'session-ended') {
+            document.querySelector('.controls').style.bottom = '40px';
+        }
     });
+    
+    // iOS specific handling
+    function isIOS() {
+        return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    }
+    
+    // On iOS, we might need to handle AR differently
+    if (isIOS()) {
+        // iOS Safari works with model-viewer's AR
+        console.log('iOS device detected - using model-viewer AR');
+    }
 </script>
+
 </body>
 </html>
