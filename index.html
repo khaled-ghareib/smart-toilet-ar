@@ -31,8 +31,10 @@
         .title-bar { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 12px 24px; border-radius: 12px; text-align: center; z-index: 50; max-width: 90%; display: none; }
         .title-bar h1 { font-size: 18px; font-weight: 600; color: white; margin: 0; }
         
-        /* Hidden AR link for iOS */
-        .ios-ar-link { display: none !important; }
+        /* iOS AR Modal */
+        #iosARModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: #1a1a1a; padding: 30px; border-radius: 20px; max-width: 90%; text-align: center; }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; justify-content: center; }
         
         @media (max-width: 768px) {
             .controls { bottom: 20px; padding: 12px; }
@@ -45,10 +47,29 @@
 </head>
 <body>
 
-<!-- Hidden iOS AR Link - This is the key for iPhone -->
-<a href="toilet_final.usdz" rel="ar" class="ios-ar-link" id="iosArLink">
-    <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTggMEMzLjYgMCAwIDMuNiAwIDhDMCAxMi40IDMuNiAxNiA4IDE2QzEyLjQgMTYgMTYgMTIuNCAxNiA4QzE2IDMuNiAxI=..." alt="AR">
-</a>
+<!-- iOS AR Modal -->
+<div id="iosARModal">
+    <div class="modal-content">
+        <h2>AR on iPhone</h2>
+        <p style="margin: 15px 0; line-height: 1.5;">To view in AR on iPhone:</p>
+        
+        <div style="text-align: left; margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 10px;">
+            <p style="margin: 10px 0;"><strong>Option 1: Direct AR (Recommended)</strong></p>
+            <p style="margin: 5px 0; font-size: 14px; color: #aaa;">Click the AR button below to open directly in AR</p>
+            
+            <p style="margin: 20px 0 10px 0;"><strong>Option 2: Download First</strong></p>
+            <p style="margin: 5px 0; font-size: 14px; color: #aaa;">1. Download USDZ file</p>
+            <p style="margin: 5px 0; font-size: 14px; color: #aaa;">2. Open in Files app</p>
+            <p style="margin: 5px 0; font-size: 14px; color: #aaa;">3. Tap AR button in Files</p>
+        </div>
+        
+        <div class="modal-buttons">
+            <button id="openDirectAR" style="background: #28a745;">Open AR Now</button>
+            <button id="downloadUSDZ" style="background: #007bff;">Download USDZ</button>
+            <button id="closeModal" style="background: #6c757d;">Cancel</button>
+        </div>
+    </div>
+</div>
 
 <button id="arButton">View in AR 👁️</button>
 
@@ -143,88 +164,210 @@
     function loadModel() {
         const loader = new THREE.GLTFLoader();
         
-        loader.load(
+        // Try different paths for the GLB file
+        const possiblePaths = [
             'toilet_final.glb',
-            (gltf) => {
-                model = gltf.scene;
-                
-                // Center the model
-                const box = new THREE.Box3().setFromObject(model);
-                const center = box.getCenter(new THREE.Vector3());
-                const size = box.getSize(new THREE.Vector3());
-                
-                model.position.x = -center.x;
-                model.position.y = -center.y + (size.y / 2);
-                model.position.z = -center.z;
-                
-                scene.add(model);
-                
-                // Setup animations if available
-                if (gltf.animations && gltf.animations.length > 0) {
-                    mixer = new THREE.AnimationMixer(model);
+            './toilet_final.glb',
+            'models/toilet_final.glb',
+            './models/toilet_final.glb'
+        ];
+        
+        let currentPathIndex = 0;
+        
+        function tryLoad(path) {
+            console.log('Trying to load from:', path);
+            
+            loader.load(
+                path,
+                (gltf) => {
+                    model = gltf.scene;
                     
-                    gltf.animations.forEach(clip => {
-                        const name = clip.name;
-                        if (animationStates[name]) {
-                            animationStates[name].action = mixer.clipAction(clip);
-                            animationStates[name].action.play();
-                            animationStates[name].action.paused = true;
-                            animationStates[name].action.time = 0;
-                        }
-                    });
+                    // Center the model
+                    const box = new THREE.Box3().setFromObject(model);
+                    const center = box.getCenter(new THREE.Vector3());
+                    const size = box.getSize(new THREE.Vector3());
+                    
+                    model.position.x = -center.x;
+                    model.position.y = -center.y + (size.y / 2);
+                    model.position.z = -center.z;
+                    
+                    scene.add(model);
+                    
+                    // Setup animations if available
+                    if (gltf.animations && gltf.animations.length > 0) {
+                        mixer = new THREE.AnimationMixer(model);
+                        
+                        gltf.animations.forEach(clip => {
+                            const name = clip.name;
+                            if (animationStates[name]) {
+                                animationStates[name].action = mixer.clipAction(clip);
+                                animationStates[name].action.play();
+                                animationStates[name].action.paused = true;
+                                animationStates[name].action.time = 0;
+                            }
+                        });
+                    }
+                    
+                    // Hide loading, show UI
+                    document.getElementById('loading').style.display = 'none';
+                    document.querySelector('.controls').style.display = 'grid';
+                    document.querySelector('.title-bar').style.display = 'block';
+                    
+                    console.log('Model loaded successfully from:', path);
+                },
+                (xhr) => {
+                    // Loading progress
+                    const percent = (xhr.loaded / xhr.total * 100).toFixed(2);
+                    document.getElementById('loading').querySelector('p').textContent = `Loading: ${percent}%`;
+                },
+                (error) => {
+                    console.error('Error loading from', path, ':', error);
+                    
+                    // Try next path
+                    currentPathIndex++;
+                    if (currentPathIndex < possiblePaths.length) {
+                        tryLoad(possiblePaths[currentPathIndex]);
+                    } else {
+                        // All paths failed
+                        document.getElementById('loading').innerHTML = `
+                            <div style="color: #ff6b6b; margin-bottom: 15px;">⚠️ Error loading model</div>
+                            <p style="font-size: 12px; margin-bottom: 10px;">Tried paths: ${possiblePaths.join(', ')}</p>
+                            <p style="font-size: 12px;">Make sure toilet_final.glb is in the same folder as this HTML file</p>
+                        `;
+                    }
                 }
-                
-                // Hide loading, show UI
-                document.getElementById('loading').style.display = 'none';
-                document.querySelector('.controls').style.display = 'grid';
-                document.querySelector('.title-bar').style.display = 'block';
-                
-                console.log('Model loaded successfully');
-            },
-            (xhr) => {
-                // Loading progress
-                const percent = (xhr.loaded / xhr.total * 100).toFixed(2);
-                document.getElementById('loading').querySelector('p').textContent = `Loading: ${percent}%`;
-            },
-            (error) => {
-                console.error('Error loading model:', error);
-                document.getElementById('loading').innerHTML = `
-                    <div style="color: #ff6b6b; margin-bottom: 15px;">⚠️ Error loading model</div>
-                    <p style="font-size: 12px;">Make sure toilet_final.glb is in the same folder</p>
-                `;
-            }
-        );
+            );
+        }
+        
+        // Start trying to load
+        tryLoad(possiblePaths[0]);
     }
     
     function setupARButton() {
         const arButton = document.getElementById('arButton');
+        const isIOSDevice = isIOS();
         
-        if (isIOS()) {
-            // iOS device - show AR button
+        // Show AR button for iOS and other devices with WebXR
+        if (isIOSDevice || ('xr' in navigator)) {
             arButton.style.display = 'block';
-            arButton.onclick = () => {
-                // For iOS, we use the hidden AR link
-                const arLink = document.getElementById('iosArLink');
-                
-                // Show a helpful message
-                alert('Opening AR on iPhone...\n\nIf AR doesn\'t open automatically:\n1. Make sure you have the USDZ file\n2. Tap the download button\n3. Open in Files app\n4. Tap the AR button');
-                
-                // Trigger the AR link
-                arLink.click();
-            };
-        } else {
-            // Check for WebXR on other devices
-            if ('xr' in navigator) {
-                navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
-                    if (supported) {
-                        arButton.style.display = 'block';
-                        arButton.onclick = () => {
-                            alert('For WebXR AR (Android/Desktop):\n\n1. Use Chrome browser\n2. Visit via HTTPS\n3. Grant camera permissions\n\nFor iPhone: USDZ file required');
-                        };
-                    }
-                });
+            
+            if (isIOSDevice) {
+                // iOS - show modal with options
+                arButton.onclick = showIOSARModal;
+            } else {
+                // Non-iOS devices
+                if ('xr' in navigator) {
+                    navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
+                        if (supported) {
+                            arButton.onclick = () => {
+                                alert('For WebXR AR (Android/Desktop):\n\n1. Use Chrome browser\n2. Visit via HTTPS (not file://)\n3. Grant camera permissions\n\nURL must start with https://');
+                            };
+                        } else {
+                            arButton.onclick = () => {
+                                alert('WebXR AR not supported on this device.\n\nFor iPhone: Use Safari with USDZ file');
+                            };
+                        }
+                    });
+                }
             }
         }
+    }
+    
+    function showIOSARModal() {
+        const modal = document.getElementById('iosARModal');
+        modal.style.display = 'flex';
+        
+        // Setup modal buttons
+        document.getElementById('openDirectAR').onclick = () => {
+            openDirectAR();
+            modal.style.display = 'none';
+        };
+        
+        document.getElementById('downloadUSDZ').onclick = () => {
+            downloadUSDZ();
+            modal.style.display = 'none';
+        };
+        
+        document.getElementById('closeModal').onclick = () => {
+            modal.style.display = 'none';
+        };
+    }
+    
+    function openDirectAR() {
+        // Create a proper AR link with all necessary attributes
+        const arLink = document.createElement('a');
+        
+        // Try different paths for USDZ file
+        const usdzPaths = [
+            'toilet_final.usdz',
+            './toilet_final.usdz',
+            'models/toilet_final.usdz',
+            './models/toilet_final.usdz'
+        ];
+        
+        // Create a temporary div to test which file exists
+        let foundPath = null;
+        for (const path of usdzPaths) {
+            const testLink = document.createElement('a');
+            testLink.href = path;
+            testLink.onerror = () => console.log('Path not found:', path);
+            // We'll assume first path is correct for now
+            foundPath = path;
+            break;
+        }
+        
+        if (foundPath) {
+            arLink.href = foundPath;
+            arLink.setAttribute('rel', 'ar');
+            arLink.setAttribute('alt', 'Icon Smart Toilet AR');
+            
+            // Add AR badge image (required for iOS)
+            const img = document.createElement('img');
+            img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMyOGE3NDUiLz4KPHBhdGggZD0iTTMyIDQ4QzI0LjggNDggMTkgNDIuMiAxOSAzNUMxOSAyNy44IDI0LjggMjIgMzIgMjJDMzkuMiAyMiA0NSAyNy44IDQ1IDM1QzQ1IDQyLjIgMzkuMiA0OCAzMiA0OFoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0zNi41IDM1QzM2LjUgMzcuNSAzNC41IDM5LjUgMzIgMzkuNUMyOS41IDM5LjUgMjcuNSAzNy41IDI3LjUgMzVDMjcuNSAzMi41IDI5LjUgMzAuNSAzMiAzMC41QzM0LjUgMzAuNSAzNi41IDMyLjUgMzYuNSAzNVoiIGZpbGw9IiMyOGE3NDUiLz4KPC9zdmc+Cg==';
+            img.style.width = '64px';
+            img.style.height = '64px';
+            img.alt = 'AR';
+            
+            arLink.appendChild(img);
+            arLink.style.display = 'none';
+            
+            document.body.appendChild(arLink);
+            
+            // Try to trigger AR
+            arLink.click();
+            
+            // Show message if nothing happens after 1 second
+            setTimeout(() => {
+                alert('If AR didn\'t open:\n\n1. Make sure toilet_final.usdz is in the same folder\n2. Try downloading the USDZ file first\n3. Open the downloaded file in Files app\n4. Tap the AR button in Files');
+            }, 1000);
+            
+            // Clean up
+            setTimeout(() => {
+                document.body.removeChild(arLink);
+            }, 2000);
+        } else {
+            alert('USDZ file not found.\n\nPlease make sure toilet_final.usdz is in the same folder as this HTML file.');
+        }
+    }
+    
+    function downloadUSDZ() {
+        // Create download link for USDZ
+        const downloadLink = document.createElement('a');
+        downloadLink.href = 'toilet_final.usdz';
+        downloadLink.download = 'Icon_Smart_Toilet.usdz';
+        downloadLink.style.display = 'none';
+        document.body.appendChild(downloadLink);
+        
+        // Trigger download
+        downloadLink.click();
+        
+        // Clean up
+        setTimeout(() => {
+            document.body.removeChild(downloadLink);
+        }, 100);
+        
+        // Show instructions
+        alert('USDZ file downloading...\n\nAfter download:\n1. Open Files app\n2. Find "Icon_Smart_Toilet.usdz"\n3. Tap the file\n4. Tap the AR button (cube icon) in top right');
     }
     
     function toggleAnimation(animationName) {
