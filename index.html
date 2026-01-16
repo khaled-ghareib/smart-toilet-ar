@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    <style>
+        body { margin: 0; background: #111; font-family: sans-serif; color: white; }
+        model-viewer { width: 100vw; height: 100vh; }
+        .controls {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 90%;
+        }
+        button {
+            padding: 15px; border-radius: 10px; border: 1px solid #444;
+            background: #222; color: white; font-weight: bold; font-size: 12px;
+        }
+        button.active { background: #007bff; border: 1px solid #007bff; }
+    </style>
+</head>
+<body>
+
+<model-viewer id="toilet" src="toilet_final.glb" ar camera-controls 
+              interaction-prompt="none" shadow-intensity="1">
+    <div class="controls">
+        <button id="btn-Cover" onclick="toggle('CoverAction', 'btn-Cover')">Cover</button>
+        <button id="btn-Seat" onclick="toggle('SeatAction', 'btn-Seat')">Seat</button>
+        <button id="btn-Bidet" onclick="toggle('BidetAction', 'btn-Bidet')">Bidet</button>
+        <button id="btn-BidetCover" onclick="toggle('BidetCoverAction', 'btn-BidetCover')">Bidet Lid</button>
+        <button id="btn-Airvent" onclick="toggle('AirventAction', 'btn-Airvent')">Air Vent</button>
+        <button id="btn-LED" onclick="toggle('LEDAction', 'btn-LED')">LED</button>
+    </div>
+</model-viewer>
+
+<script>
+    const mv = document.querySelector('#toilet');
+    let states = {}; // Track which parts are open
+
+    function toggle(name, id) {
+        const btn = document.getElementById(id);
+        
+        // --- LOGIC: Stop the cover from closing when seat moves ---
+        mv.animationName = name;
+        
+        if (!states[name]) {
+            // OPENING
+            states[name] = true;
+            btn.classList.add('active');
+            
+            mv.pause(); 
+            mv.currentTime = 0; // Start at beginning
+            mv.play({repetitions: 1}); // Play exactly ONCE
+            
+            // This prevents the infinite loop
+            mv.addEventListener('finished', () => {
+                if (states[name]) mv.pause(); 
+            }, { once: true });
+
+        } else {
+            // CLOSING
+            states[name] = false;
+            btn.classList.remove('active');
+            mv.pause();
+            mv.currentTime = 0; // Jump back to closed position
+        }
+    }
+</script>
+</body>
+</html>
