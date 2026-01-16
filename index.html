@@ -3,861 +3,134 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Icon Smart Toilet</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/WebXR.js"></script>
+    <title>Icon Smart Toilet AR</title>
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root { --accent: #007bff; }
+        body { margin: 0; background: #111; font-family: -apple-system, sans-serif; color: white; overflow: hidden; }
+        
+        model-viewer {
+            width: 100vw; height: 100vh;
+            background-color: #1a1a1a;
+            --poster-color: transparent;
         }
 
-        body {
-            margin: 0;
-            overflow: hidden;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: #000;
-            color: white;
-            height: 100vh;
-            width: 100vw;
-        }
-
-        #loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            z-index: 10;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 20px;
-            border-radius: 15px;
-            backdrop-filter: blur(10px);
-        }
-
-        .loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: #007bff;
-            animation: spin 1s ease-in-out infinite;
-            margin: 0 auto 15px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
+        /* Controls Container */
         .controls {
-            position: absolute;
-            bottom: 40px;
-            left: 50%;
+            position: absolute; bottom: 40px; left: 50%;
             transform: translateX(-50%);
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            width: 90%;
-            max-width: 400px;
-            z-index: 100;
-            padding: 15px;
-            background: rgba(20, 20, 20, 0.7);
-            backdrop-filter: blur(20px);
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            display: none;
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 12px; width: 90%; max-width: 400px;
+            z-index: 100; padding: 20px;
+            background: rgba(20, 20, 20, 0.8);
+            backdrop-filter: blur(15px);
+            border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         button {
-            padding: 14px 10px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(40, 40, 40, 0.9);
-            backdrop-filter: blur(10px);
-            color: white;
-            font-weight: 600;
-            font-size: 13px;
-            letter-spacing: 0.3px;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
-            min-height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
+            padding: 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(50, 50, 50, 0.9); color: white;
+            font-weight: 600; font-size: 13px; cursor: pointer;
+            transition: all 0.2s ease; display: flex; align-items: center; justify-content: center;
         }
 
-        button:hover {
-            background: rgba(60, 60, 60, 0.9);
-            transform: translateY(-2px);
+        button.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 0 15px rgba(0, 123, 255, 0.4);
         }
 
-        button:active {
-            transform: scale(0.95);
+        .status-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #ff4444; margin-right: 8px;
         }
 
-        button.on {
-            background: linear-gradient(135deg, #007bff, #0056cc);
-            border-color: #007bff;
-            box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
-        }
+        button.active .status-dot { background: #44ff44; }
 
-        button.off {
-            background: rgba(40, 40, 40, 0.9);
-            border-color: rgba(255, 255, 255, 0.1);
-        }
+        #btn-Reset { grid-column: span 2; background: rgba(255,255,255,0.1); }
 
-        .status-indicator {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            margin-right: 8px;
-            background: #ff4444;
-            transition: background 0.3s;
-        }
-
-        button.on .status-indicator {
-            background: #44ff44;
-        }
-
-        canvas {
-            display: block;
-            width: 100vw;
-            height: 100vh;
-        }
-
-        /* AR Launch Button */
-        #arLaunchButton {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, #28a745, #20c997);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 25px;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-            z-index: 100;
-            display: none;
-            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
-            transition: all 0.2s ease;
-        }
-
-        #arLaunchButton:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(40, 167, 69, 0.4);
-        }
-
-        #arLaunchButton:active {
-            transform: scale(0.95);
-        }
-
-        #arLaunchButton::before {
-            content: "👁️ Launch AR";
-            font-size: 14px;
-        }
-
-        #exitAR {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(255, 0, 0, 0.8);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 25px;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-            z-index: 1000;
-            display: none;
-        }
-
-        .title-bar {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.7);
-            padding: 12px 24px;
-            border-radius: 12px;
-            text-align: center;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            z-index: 50;
-            max-width: 90%;
-            display: none;
-        }
-
-        .title-bar h1 {
-            font-size: 18px;
-            font-weight: 600;
-            color: white;
-            margin: 0;
-        }
-
-        @media (max-width: 768px) {
-            .controls {
-                grid-template-columns: repeat(2, 1fr);
-                bottom: 20px;
-                padding: 12px;
-            }
-            
-            button {
-                font-size: 12px;
-                padding: 12px 8px;
-                min-height: 45px;
-            }
-            
-            #arLaunchButton {
-                top: 10px;
-                right: 10px;
-                padding: 10px 20px;
-                font-size: 14px;
-            }
-            
-            #arLaunchButton::before {
-                content: "👁️ AR";
-                font-size: 13px;
-            }
-            
-            #exitAR {
-                top: 10px;
-                left: 10px;
-                padding: 10px 20px;
-                font-size: 14px;
-            }
-            
-            .title-bar {
-                top: 10px;
-                padding: 10px 20px;
-            }
-            
-            .title-bar h1 {
-                font-size: 16px;
-            }
+        /* AR Button Style */
+        #ar-button {
+            position: absolute; top: 20px; right: 20px;
+            padding: 12px 24px; background: white; color: black;
+            border-radius: 30px; border: none; font-weight: bold;
         }
     </style>
 </head>
 <body>
 
-<button id="arLaunchButton" title="Launch Augmented Reality"></button>
-<button id="exitAR">Exit AR</button>
+<model-viewer id="toilet" 
+    src="toilet_final.glb" 
+    ios-src="toilet_final.usdz"
+    ar ar-modes="webxr scene-viewer quick-look" 
+    camera-controls 
+    shadow-intensity="1" 
+    exposure="1">
 
-<div class="title-bar">
-    <h1>Icon Smart Toilet</h1>
-</div>
+    <div class="controls" id="ar-controls">
+        <button id="btn-CoverAction" onclick="toggleAnim('CoverAction')">
+            <div class="status-dot"></div> Cover
+        </button>
+        <button id="btn-SeatAction" onclick="toggleAnim('SeatAction')">
+            <div class="status-dot"></div> Seat
+        </button>
+        <button id="btn-BidetAction" onclick="toggleAnim('BidetAction')">
+            <div class="status-dot"></div> Bidet
+        </button>
+        <button id="btn-AirventAction" onclick="toggleAnim('AirventAction')">
+            <div class="status-dot"></div> Air Vent
+        </button>
+        <button id="btn-Reset" onclick="resetAll()">Reset All Settings</button>
+    </div>
 
-<div id="loading">
-    <div class="loading-spinner"></div>
-    <p>Loading Icon Smart Toilet...</p>
-</div>
-
-<div class="controls">
-    <button id="btn-CoverAction" data-animation="CoverAction">
-        <span class="status-indicator"></span>
-        Cover
-    </button>
-    <button id="btn-SeatAction" data-animation="SeatAction">
-        <span class="status-indicator"></span>
-        Seat
-    </button>
-    <button id="btn-BidetAction" data-animation="BidetAction">
-        <span class="status-indicator"></span>
-        Bidet
-    </button>
-    <button id="btn-AirventAction" data-animation="AirventAction">
-        <span class="status-indicator"></span>
-        Air Vent
-    </button>
-    <button id="btn-Reset" style="grid-column: span 2;">
-        Reset All
-    </button>
-</div>
+</model-viewer>
 
 <script>
-    // Scene setup
-    let scene, camera, renderer, controls;
-    let mixer;
-    let model;
-    let isAr = false;
-    let arSession = null;
-    let arHitTestSource = null;
-    let arRefSpace = null;
-    
-    // Animation states
-    const animationStates = {
-        'CoverAction': { isOpen: false, action: null, clip: null },
-        'SeatAction': { isOpen: false, action: null, clip: null },
-        'BidetAction': { isOpen: false, action: null, clip: null },
-        'AirventAction': { isOpen: false, action: null, clip: null }
+    const mv = document.querySelector('#toilet');
+    const states = {
+        CoverAction: false,
+        SeatAction: false,
+        BidetAction: false,
+        AirventAction: false
     };
-    
-    // Initialize Three.js scene
-    function init() {
-        // Create scene
-        scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x1a1a1a);
-        
-        // Create camera
-        camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(3, 2, 5);
-        camera.lookAt(0, 0.5, 0);
-        
-        // Create renderer
-        renderer = new THREE.WebGLRenderer({ 
-            antialias: true, 
-            alpha: true,
-            powerPreference: "high-performance"
-        });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        renderer.xr.enabled = true;
-        document.body.appendChild(renderer.domElement);
-        
-        // Add orbit controls
-        controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.1;
-        controls.rotateSpeed = 0.5;
-        controls.zoomSpeed = 1.0;
-        controls.panSpeed = 0.8;
-        controls.minDistance = 0.5;
-        controls.maxDistance = 20;
-        controls.maxPolarAngle = Math.PI / 2;
-        controls.minPolarAngle = 0;
-        controls.target.set(0, 0.5, 0);
-        
-        // Add lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        scene.add(ambientLight);
-        
-        const mainLight = new THREE.DirectionalLight(0xffffff, 1.0);
-        mainLight.position.set(5, 8, 5);
-        mainLight.castShadow = true;
-        scene.add(mainLight);
-        
-        const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
-        fillLight.position.set(-5, 3, -5);
-        scene.add(fillLight);
-        
-        // Load the 3D model
-        loadModel();
-        
-        // Handle window resize
-        window.addEventListener('resize', onWindowResize);
-        
-        // Setup AR button
-        setupAR();
-        
-        // Start animation loop
-        animate();
-    }
-    
-    // Load the GLB model
-    function loadModel() {
-        const loader = new THREE.GLTFLoader();
-        
-        loader.load(
-            'toilet_final.glb',
-            function(gltf) {
-                model = gltf.scene;
-                
-                // Scale the model if needed
-                model.scale.set(1, 1, 1);
-                
-                // Calculate bounding box
-                const box = new THREE.Box3().setFromObject(model);
-                const center = box.getCenter(new THREE.Vector3());
-                const size = box.getSize(new THREE.Vector3());
-                
-                // Scale model if needed
-                const maxSize = Math.max(size.x, size.y, size.z);
-                if (maxSize > 5) {
-                    const scale = 2 / maxSize;
-                    model.scale.set(scale, scale, scale);
-                } else if (maxSize < 0.5) {
-                    const scale = 2 / maxSize;
-                    model.scale.set(scale, scale, scale);
-                }
-                
-                // Recalculate after scaling
-                box.setFromObject(model);
-                box.getCenter(center);
-                box.getSize(size);
-                
-                // Center the model
-                model.position.x = -center.x;
-                model.position.y = -center.y + (size.y / 2);
-                model.position.z = -center.z;
-                
-                scene.add(model);
-                
-                // Enable shadows
-                model.traverse((child) => {
-                    if (child.isMesh) {
-                        child.castShadow = true;
-                        child.receiveShadow = true;
-                    }
-                });
-                
-                // Setup animations
-                setupAnimations(gltf);
-                
-                // Adjust camera
-                const modelHeight = size.y;
-                const modelWidth = Math.max(size.x, size.z);
-                const distance = Math.max(modelHeight, modelWidth) * 2;
-                
-                camera.position.set(distance, distance * 0.6, distance);
-                controls.target.set(0, modelHeight * 0.5, 0);
-                controls.update();
-                
-                // Hide loading screen
-                document.getElementById('loading').style.display = 'none';
-                
-                // Show controls, title, and AR button
-                document.querySelector('.controls').style.display = 'grid';
-                document.querySelector('.title-bar').style.display = 'block';
-                document.getElementById('arLaunchButton').style.display = 'block';
-                
-                console.log('Model loaded successfully!');
-            },
-            function(xhr) {
-                const percent = (xhr.loaded / xhr.total * 100).toFixed(2);
-                document.getElementById('loading').innerHTML = `
-                    <div class="loading-spinner"></div>
-                    <p>Loading: ${percent}%</p>
-                `;
-            },
-            function(error) {
-                console.error('Error loading model:', error);
-                document.getElementById('loading').innerHTML = `
-                    <div style="color: #ff6b6b; margin-bottom: 15px;">⚠️ Error loading model</div>
-                    <p style="font-size: 12px; opacity: 0.8;">${error.message}</p>
-                    <button onclick="location.reload()" style="margin-top: 15px; padding: 10px 20px; background: #007bff; border: none; border-radius: 8px; color: white; cursor: pointer;">
-                        Retry
-                    </button>
-                `;
-            }
-        );
-    }
-    
-    // Setup animations
-    function setupAnimations(gltf) {
-        if (!gltf.animations || gltf.animations.length === 0) {
-            console.warn('No animations found in the model!');
-            document.querySelectorAll('[data-animation]').forEach(btn => {
-                if (btn.id !== 'btn-Reset') {
-                    btn.disabled = true;
-                    btn.innerHTML = '<span class="status-indicator"></span>No Anim';
-                    btn.style.opacity = '0.5';
-                }
-            });
-            return;
-        }
-        
-        mixer = new THREE.AnimationMixer(model);
-        
-        // Store all available animations
-        gltf.animations.forEach(clip => {
-            const name = clip.name;
-            if (animationStates[name]) {
-                animationStates[name].clip = clip;
-                animationStates[name].action = mixer.clipAction(clip);
-                animationStates[name].action.setEffectiveTimeScale(0);
-            }
-        });
-        
-        // Initialize all animations to start (closed position)
-        Object.keys(animationStates).forEach(name => {
-            const state = animationStates[name];
-            if (state.action) {
-                state.action.play();
-                state.action.paused = true;
-                state.action.time = 0;
-            } else {
-                console.warn(`Animation "${name}" not found in model`);
-                const button = document.getElementById(`btn-${name}`);
-                if (button) {
-                    button.disabled = true;
-                    button.innerHTML = '<span class="status-indicator"></span>Missing';
-                    button.style.opacity = '0.5';
-                }
-            }
-        });
-    }
-    
-    // Setup AR button
-    function setupAR() {
-        if ('xr' in navigator) {
-            navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
-                if (supported) {
-                    document.getElementById('arLaunchButton').style.display = 'block';
-                    console.log('AR is supported on this device');
-                } else {
-                    console.log('AR is not supported on this device');
-                    document.getElementById('arLaunchButton').innerHTML = "AR Not Available";
-                    document.getElementById('arLaunchButton').style.opacity = '0.5';
-                    document.getElementById('arLaunchButton').style.cursor = 'not-allowed';
-                }
-            }).catch(err => {
-                console.error('Error checking AR support:', err);
-                document.getElementById('arLaunchButton').innerHTML = "AR Error";
-                document.getElementById('arLaunchButton').style.opacity = '0.5';
-                document.getElementById('arLaunchButton').style.cursor = 'not-allowed';
-            });
+
+    function toggleAnim(name) {
+        const btn = document.getElementById(`btn-${name}`);
+        states[name] = !states[name];
+
+        if (states[name]) {
+            btn.classList.add('active');
+            // Play the animation
+            mv.animationName = name;
+            mv.play({ repetitions: 1 });
         } else {
-            console.log('WebXR not supported');
-            document.getElementById('arLaunchButton').innerHTML = "AR Not Supported";
-            document.getElementById('arLaunchButton').style.opacity = '0.5';
-            document.getElementById('arLaunchButton').style.cursor = 'not-allowed';
+            btn.classList.remove('active');
+            // To "reverse", we set to the animation and pause at the start
+            // Model-viewer doesn't native reverse, so we re-trigger or reset
+            mv.animationName = name;
+            mv.play({ repetitions: 1 }); 
+        }
+
+        // Logic: If Cover is closed, visually turn off other buttons
+        if (name === 'CoverAction' && !states[name]) {
+            resetAll();
         }
     }
-    
-    // Launch AR mode
-    async function launchAR() {
-        if (!navigator.xr) {
-            alert('WebXR not supported. Please use:\n• Chrome on Android\n• Safari on iOS 13+\n• Make sure you are using HTTPS');
-            return;
-        }
-        
-        try {
-            // Request AR session
-            const session = await navigator.xr.requestSession('immersive-ar', {
-                requiredFeatures: ['hit-test'],
-                optionalFeatures: ['dom-overlay'],
-                domOverlay: { root: document.body }
-            });
-            
-            console.log('AR session started');
-            
-            // Set up the renderer for XR
-            renderer.xr.setSession(session);
-            isAr = true;
-            arSession = session;
-            
-            // Hide desktop controls
-            document.getElementById('arLaunchButton').style.display = 'none';
-            document.querySelector('.title-bar').style.display = 'none';
-            document.querySelector('.controls').style.display = 'none';
-            
-            // Show exit button
-            document.getElementById('exitAR').style.display = 'block';
-            
-            // Disable orbit controls in AR
-            controls.enabled = false;
-            
-            // Set up reference space
-            arRefSpace = await session.requestReferenceSpace('local');
-            
-            // Set up hit test source for placing the model
-            session.requestReferenceSpace('viewer').then((referenceSpace) => {
-                session.requestHitTestSource({ space: referenceSpace }).then((source) => {
-                    arHitTestSource = source;
-                });
-            });
-            
-            // Listen for select events (taps) to place the model
-            session.addEventListener('select', onSelect);
-            
-            // Listen for session end
-            session.addEventListener('end', onSessionEnd);
-            
-            // Start the XR animation loop
-            renderer.setAnimationLoop(onXRFrame);
-            
-        } catch (error) {
-            console.error('Error starting AR session:', error);
-            alert('Failed to start AR: ' + error.message + '\n\nMake sure:\n1. You are using HTTPS\n2. Your device supports AR\n3. Camera permissions are granted');
-        }
-    }
-    
-    // Handle XR frame
-    function onXRFrame(time, frame) {
-        if (!arSession || !arRefSpace) return;
-        
-        // Get the pose of the device
-        const pose = frame.getViewerPose(arRefSpace);
-        
-        if (pose) {
-            // Update camera with AR pose
-            const view = pose.views[0];
-            camera.matrix.fromArray(view.transform.matrix);
-            camera.matrix.decompose(camera.position, camera.quaternion, camera.scale);
-            camera.projectionMatrix.fromArray(view.projectionMatrix);
-            camera.updateMatrixWorld(true);
-            
-            // Handle hit test for model placement
-            if (arHitTestSource && model) {
-                const hitTestResults = frame.getHitTestResults(arHitTestSource);
-                if (hitTestResults.length > 0) {
-                    const hit = hitTestResults[0];
-                    const hitMatrix = new THREE.Matrix4().fromArray(hit.getPose(arRefSpace).transform.matrix);
-                    
-                    // Position the model at the hit location
-                    model.position.setFromMatrixPosition(hitMatrix);
-                    model.visible = true;
-                }
-            }
-        }
-        
-        // Update animations
-        if (mixer) {
-            const delta = renderer.xr.getFrame().time / 1000;
-            mixer.update(delta);
-        }
-        
-        // Render the scene
-        renderer.render(scene, camera);
-    }
-    
-    // Handle tap/select in AR
-    function onSelect(event) {
-        if (!arHitTestSource || !model) return;
-        
-        const frame = event.frame;
-        const hitTestResults = frame.getHitTestResults(arHitTestSource);
-        
-        if (hitTestResults.length > 0) {
-            const hit = hitTestResults[0];
-            const hitMatrix = new THREE.Matrix4().fromArray(hit.getPose(arRefSpace).transform.matrix);
-            
-            // Position the model at the hit location
-            model.position.setFromMatrixPosition(hitMatrix);
-            model.visible = true;
-        }
-    }
-    
-    // Handle session end
-    function onSessionEnd() {
-        console.log('AR session ended');
-        
-        // Clean up
-        isAr = false;
-        arSession = null;
-        arHitTestSource = null;
-        arRefSpace = null;
-        
-        // Stop XR animation loop
-        renderer.setAnimationLoop(null);
-        
-        // Show desktop controls
-        document.getElementById('arLaunchButton').style.display = 'block';
-        document.querySelector('.title-bar').style.display = 'block';
-        document.querySelector('.controls').style.display = 'grid';
-        
-        // Hide exit button
-        document.getElementById('exitAR').style.display = 'none';
-        
-        // Re-enable orbit controls
-        controls.enabled = true;
-        
-        // Reset camera to default position
-        camera.position.set(3, 2, 5);
-        camera.lookAt(0, 0.5, 0);
-        controls.update();
-    }
-    
-    // Exit AR
-    function exitAR() {
-        if (arSession) {
-            arSession.end();
-        }
-    }
-    
-    // Toggle animation
-    async function toggleAnimation(animationName) {
-        const state = animationStates[animationName];
-        if (!state || !state.action) {
-            console.warn(`Animation "${animationName}" not found or not loaded`);
-            return;
-        }
-        
-        state.isOpen = !state.isOpen;
-        updateButton(animationName);
-        
-        // For BidetAction, play both lid and spray in sequence
-        if (animationName === 'BidetAction') {
-            await playBidetAnimation(state.isOpen);
-        } else {
-            animateToState(animationName, state.isOpen ? 1 : 0);
-        }
-        
-        // If cover is closing, also close seat
-        if (animationName === 'CoverAction' && !state.isOpen) {
-            const seatState = animationStates.SeatAction;
-            if (seatState && seatState.action && seatState.isOpen) {
-                seatState.isOpen = false;
-                updateButton('SeatAction');
-                animateToState('SeatAction', 0);
-            }
-        }
-    }
-    
-    // Play bidet animation sequence
-    async function playBidetAnimation(isOpening) {
-        const state = animationStates.BidetAction;
-        if (!state || !state.action) return;
-        
-        if (isOpening) {
-            // Opening: play from 0 to 1 (both lid open and spray)
-            await animateToStateSequence('BidetAction', 0, 1, 2.0);
-        } else {
-            // Closing: play from 1 to 0 (spray stops, then lid closes)
-            await animateToStateSequence('BidetAction', 1, 0, 2.0);
-        }
-    }
-    
-    // Animate from start to end with duration
-    async function animateToStateSequence(animationName, startProgress, endProgress, duration) {
-        return new Promise((resolve) => {
-            const state = animationStates[animationName];
-            if (!state || !state.action) {
-                resolve();
-                return;
-            }
-            
-            const clipDuration = state.clip ? state.clip.duration : 1;
-            const startTime = startProgress * clipDuration;
-            const endTime = endProgress * clipDuration;
-            
-            state.action.paused = false;
-            state.action.time = startTime;
-            state.action.setEffectiveTimeScale(1);
-            
-            // Calculate speed for desired duration
-            const timeDiff = endTime - startTime;
-            const speed = timeDiff / duration;
-            
-            state.action.timeScale = speed;
-            
-            // When animation reaches target, pause it
-            setTimeout(() => {
-                state.action.paused = true;
-                state.action.time = endTime;
-                state.action.timeScale = 0;
-                resolve();
-            }, duration * 1000);
-        });
-    }
-    
-    // Animate to specific time
-    function animateToState(animationName, targetProgress) {
-        const state = animationStates[animationName];
-        if (!state || !state.action) return;
-        
-        const clipDuration = state.clip ? state.clip.duration : 1;
-        const targetTime = targetProgress * clipDuration;
-        
-        state.action.paused = false;
-        state.action.setEffectiveTimeScale(1);
-        
-        const currentTime = state.action.time;
-        const timeDiff = targetTime - currentTime;
-        const speed = Math.abs(timeDiff) / 0.5;
-        
-        state.action.timeScale = timeDiff >= 0 ? speed : -speed;
-        
-        setTimeout(() => {
-            state.action.paused = true;
-            state.action.time = targetTime;
-            state.action.timeScale = 0;
-        }, 500);
-    }
-    
-    // Update button appearance
-    function updateButton(animationName) {
-        const state = animationStates[animationName];
-        const button = document.getElementById(`btn-${animationName}`);
-        if (!button) return;
-        
-        const indicator = button.querySelector('.status-indicator');
-        
-        if (state.isOpen) {
-            button.classList.add('on');
-            button.classList.remove('off');
-            if (indicator) indicator.style.background = '#44ff44';
-            button.innerHTML = `<span class="status-indicator"></span>${animationName.replace('Action', '')} On`;
-        } else {
-            button.classList.add('off');
-            button.classList.remove('on');
-            if (indicator) indicator.style.background = '#ff4444';
-            button.innerHTML = `<span class="status-indicator"></span>${animationName.replace('Action', '')}`;
-        }
-    }
-    
-    // Reset all animations
+
     function resetAll() {
-        Object.keys(animationStates).forEach(name => {
-            const state = animationStates[name];
-            state.isOpen = false;
-            
-            if (state.action) {
-                animateToState(name, 0);
-            }
-            
-            updateButton(name);
+        Object.keys(states).forEach(key => {
+            states[key] = false;
+            const btn = document.getElementById(`btn-${key}`);
+            if(btn) btn.classList.remove('active');
         });
-        
-        const resetBtn = document.getElementById('btn-Reset');
-        const originalBg = resetBtn.style.background;
-        resetBtn.style.background = '#28a745';
-        setTimeout(() => {
-            resetBtn.style.background = originalBg;
-        }, 300);
+        mv.pause();
     }
-    
-    // Handle window resize
-    function onWindowResize() {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-    
-    // Animation loop
-    let clock = new THREE.Clock();
-    function animate() {
-        requestAnimationFrame(animate);
-        
-        const delta = clock.getDelta();
-        
-        if (mixer && !isAr) {
-            mixer.update(delta);
-        }
-        
-        if (!isAr) {
-            controls.update();
-        }
-        
-        renderer.render(scene, camera);
-    }
-    
-    // Initialize the app
-    window.addEventListener('DOMContentLoaded', () => {
-        // Setup button event listeners
-        document.querySelectorAll('[data-animation]').forEach(button => {
-            if (button.id !== 'btn-Reset') {
-                const animationName = button.getAttribute('data-animation');
-                button.addEventListener('click', () => toggleAnimation(animationName));
-            }
-        });
-        
-        document.getElementById('btn-Reset').addEventListener('click', resetAll);
-        document.getElementById('arLaunchButton').addEventListener('click', launchAR);
-        document.getElementById('exitAR').addEventListener('click', exitAR);
-        
-        // Initialize Three.js
-        init();
+
+    // Stop auto-looping on load
+    mv.addEventListener('load', () => {
+        mv.pause();
     });
 </script>
+
 </body>
 </html>
