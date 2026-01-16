@@ -6,13 +6,56 @@
     <title>Smart Toilet Pro AR</title>
     <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
     <style>
-        body { margin: 0; background: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: white; overflow: hidden; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body { 
+            margin: 0; 
+            background: #000; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            color: white; 
+            overflow: hidden; 
+            height: 100vh;
+            width: 100vw;
+        }
         
         /* The viewer takes up the full screen */
         model-viewer {
-            width: 100vw;
-            height: 100vh;
+            width: 100%;
+            height: 100%;
             background-color: #1a1a1a;
+            --progress-bar-color: transparent;
+        }
+
+        /* Loading overlay */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 10;
+            background: rgba(0,0,0,0.7);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #007bff;
+            animation: spin 1s ease-in-out infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
 
         /* Modern Glassmorphism Controls */
@@ -22,119 +65,362 @@
             left: 50%;
             transform: translateX(-50%);
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(3, 1fr);
             gap: 12px;
             width: 90%;
-            max-width: 400px;
+            max-width: 450px;
             z-index: 100;
+            padding: 15px;
+            background: rgba(20, 20, 20, 0.7);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
         }
 
         button {
-            padding: 14px;
+            padding: 14px 10px;
             border-radius: 12px;
             border: 1px solid rgba(255,255,255,0.1);
-            background: rgba(40, 40, 40, 0.8);
+            background: rgba(40, 40, 40, 0.9);
             backdrop-filter: blur(10px);
             color: white;
             font-weight: 600;
-            font-size: 13px;
-            letter-spacing: 0.5px;
+            font-size: 12px;
+            letter-spacing: 0.3px;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
             -webkit-tap-highlight-color: transparent;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        button:hover {
+            background: rgba(60, 60, 60, 0.9);
+            transform: translateY(-2px);
         }
 
         button:active {
             transform: scale(0.95);
-            background: #007bff;
         }
 
         button.active {
-            background: #007bff;
+            background: linear-gradient(135deg, #007bff, #0056cc);
             border-color: #007bff;
-            box-shadow: 0 0 15px rgba(0, 123, 255, 0.4);
+            box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
         }
 
-        /* Custom AR Button Styling */
-        #ar-button {
-            position: absolute;
+        /* AR button styling */
+        .ar-button {
+            position: absolute !important;
             top: 20px;
             right: 20px;
-            background: #fff;
-            color: #000;
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-weight: bold;
-            border: none;
+            background: rgba(255, 255, 255, 0.9) !important;
+            color: #000 !important;
+            padding: 12px 24px !important;
+            border-radius: 25px !important;
+            font-weight: bold !important;
+            border: none !important;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+        }
+
+        .ar-button:before {
+            content: '👁️ ';
+        }
+
+        /* Instructions overlay */
+        .instructions {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 15px 25px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+            z-index: 50;
+            max-width: 90%;
+        }
+
+        .instructions h2 {
+            font-size: 14px;
+            margin-bottom: 5px;
+            color: #007bff;
+        }
+
+        .instructions p {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        /* Mobile-specific adjustments */
+        @media (max-width: 768px) {
+            .controls {
+                grid-template-columns: repeat(2, 1fr);
+                bottom: 20px;
+                padding: 12px;
+            }
+            
+            button {
+                font-size: 11px;
+                padding: 12px 8px;
+                min-height: 45px;
+            }
+            
+            .instructions {
+                top: 10px;
+                padding: 10px 15px;
+            }
+            
+            .ar-button {
+                top: 10px;
+                right: 10px;
+                padding: 10px 20px !important;
+                font-size: 14px;
+            }
         }
     </style>
 </head>
 <body>
 
-<model-viewer id="toilet" 
+<!-- Loading screen -->
+<div id="loading" class="loading">
+    <div class="loading-spinner"></div>
+    <p>Loading Smart Toilet Pro...</p>
+</div>
+
+<model-viewer 
+    id="toilet"
     src="toilet_final.glb" 
     ar 
-    ar-modes="webxr scene-viewer quick-look" 
+    ar-modes="webxr scene-viewer quick-look"
     camera-controls 
-    poster="poster.webp" 
+    touch-action="pan-y"
     shadow-intensity="2" 
     exposure="1"
-    environment-image="neutral">
+    environment-image="neutral"
+    auto-rotate
+    camera-orbit="45deg 55deg 2.5m"
+    field-of-view="30deg"
+    min-field-of-view="20deg"
+    max-field-of-view="45deg"
+    interaction-prompt="none"
+    ar-scale="auto"
+    ar-placement="floor"
+    xr-environment
+    style="width: 100%; height: 100%;">
 
-    <div class="controls">
-        <button id="btn-CoverAction" onclick="toggleAnimation('CoverAction')">Toggle Cover</button>
-        <button id="btn-SeatAction" onclick="toggleAnimation('SeatAction')">Toggle Seat</button>
-        <button id="btn-BidetCoverAction" onclick="toggleAnimation('BidetCoverAction')">Bidet Lid</button>
-        <button id="btn-BidetAction" onclick="toggleAnimation('BidetAction')">Bidet Spray</button>
-        <button id="btn-AirventAction" onclick="toggleAnimation('AirventAction')">Air Vent</button>
-        <button id="btn-LEDAction" onclick="toggleAnimation('LEDAction')">LED Cycle</button>
+    <!-- AR Button will be auto-injected by model-viewer -->
+    
+    <!-- Instructions -->
+    <div class="instructions" slot="ar-button">
+        <h2>Smart Toilet Pro AR</h2>
+        <p>Tap AR button to place in your space</p>
     </div>
 
 </model-viewer>
 
-<script>
+<!-- Controls -->
+<div class="controls">
+    <button id="btn-CoverAction" data-animation="CoverAction">Toggle Cover</button>
+    <button id="btn-SeatAction" data-animation="SeatAction">Toggle Seat</button>
+    <button id="btn-BidetCoverAction" data-animation="BidetCoverAction">Bidet Lid</button>
+    <button id="btn-BidetAction" data-animation="BidetAction">Bidet Spray</button>
+    <button id="btn-AirventAction" data-animation="AirventAction">Air Vent</button>
+    <button id="btn-LEDAction" data-animation="LEDAction">LED Cycle</button>
+    <button id="btn-Reset" style="grid-column: span 2;">Reset All</button>
+</div>
+
+<script type="module">
     const modelViewer = document.querySelector('#toilet');
-    const states = {}; // Keeps track of which animations are "open" or "closed"
-
-    function toggleAnimation(name) {
-        const btn = document.getElementById(`btn-${name}`);
+    const loading = document.getElementById('loading');
+    
+    // Animation state management
+    const animationStates = new Map();
+    let currentAnimation = null;
+    let isInAR = false;
+    
+    // Define animation details - you'll need to adjust these based on your actual animation names
+    const animationConfigs = {
+        'CoverAction': { duration: 1000, direction: 'normal' },
+        'SeatAction': { duration: 800, direction: 'normal' },
+        'BidetCoverAction': { duration: 600, direction: 'normal' },
+        'BidetAction': { duration: 2000, direction: 'normal' },
+        'AirventAction': { duration: 1500, direction: 'normal' },
+        'LEDAction': { duration: 3000, direction: 'normal', loop: true }
+    };
+    
+    // Initialize animation states
+    Object.keys(animationConfigs).forEach(name => {
+        animationStates.set(name, {
+            isPlaying: false,
+            progress: 0,
+            direction: 'forward'
+        });
+    });
+    
+    // Handle model load
+    modelViewer.addEventListener('load', () => {
+        console.log('Model loaded successfully');
+        loading.style.display = 'none';
         
-        // If it's the first time clicking, assume it's currently closed (false)
-        if (states[name] === undefined) states[name] = false;
-
-        // Toggle state
-        states[name] = !states[name];
-
-        if (states[name]) {
-            // PLAY FORWARD
-            btn.classList.add('active');
-            modelViewer.animationName = name;
-            modelViewer.play({ repetitions: 1 });
-        } else {
-            // PLAY BACKWARD
-            // Note: Native <model-viewer> doesn't support easy reverse play via API.
-            // This will restart the animation for now. 
-            btn.classList.remove('active');
-            modelViewer.animationName = name;
-            modelViewer.play({ repetitions: 1 });
+        // Get available animations
+        const animations = modelViewer.availableAnimations;
+        console.log('Available animations:', animations);
+        
+        // Setup click handlers for all buttons
+        document.querySelectorAll('[data-animation]').forEach(button => {
+            const animationName = button.getAttribute('data-animation');
+            button.addEventListener('click', () => toggleAnimation(animationName));
+        });
+        
+        // Reset button
+        document.getElementById('btn-Reset').addEventListener('click', resetAllAnimations);
+        
+        // Auto-hide instructions after 5 seconds
+        setTimeout(() => {
+            const instructions = document.querySelector('.instructions');
+            if (instructions) instructions.style.opacity = '0.5';
+        }, 5000);
+    });
+    
+    // Handle AR session
+    modelViewer.addEventListener('ar-status', (event) => {
+        isInAR = event.detail.status === 'session-started';
+        console.log('AR status:', event.detail.status, 'isInAR:', isInAR);
+        
+        if (isInAR) {
+            // Adjust UI for AR mode
+            document.querySelector('.controls').style.bottom = '20px';
+            document.querySelector('.instructions').style.display = 'none';
         }
-
-        // Master Logic: If Cover is closed, reset other buttons visually
-        if (name === 'CoverAction' && states[name] === false) {
-            Object.keys(states).forEach(key => {
-                if (key !== 'CoverAction') {
-                    states[key] = false;
-                    document.getElementById(`btn-${key}`).classList.remove('active');
-                }
-            });
+    });
+    
+    // Animation control function
+    async function toggleAnimation(animationName) {
+        if (!modelViewer.model) {
+            console.error('Model not loaded yet');
+            return;
+        }
+        
+        const button = document.getElementById(`btn-${animationName}`);
+        const state = animationStates.get(animationName);
+        const config = animationConfigs[animationName];
+        
+        // If an animation is currently playing, stop it first
+        if (currentAnimation && currentAnimation !== animationName) {
+            modelViewer.pause();
+        }
+        
+        // Toggle animation state
+        state.isPlaying = !state.isPlaying;
+        
+        if (state.isPlaying) {
+            // Play animation
+            button.classList.add('active');
+            modelViewer.animationName = animationName;
+            
+            if (config.loop) {
+                modelViewer.play({ repetitions: Infinity });
+            } else {
+                modelViewer.play();
+                
+                // Set timeout to mark as not playing when done
+                setTimeout(() => {
+                    if (animationStates.get(animationName)) {
+                        animationStates.get(animationName).isPlaying = false;
+                        button.classList.remove('active');
+                    }
+                }, config.duration);
+            }
+            
+            currentAnimation = animationName;
+        } else {
+            // Stop animation
+            button.classList.remove('active');
+            modelViewer.pause();
+            
+            if (config.loop) {
+                currentAnimation = null;
+            }
+        }
+        
+        // Master logic: If cover is closed, reset other states visually
+        if (animationName === 'CoverAction' && !state.isPlaying) {
+            resetVisualStatesExcept('CoverAction');
         }
     }
-
-    // Prevent auto-playing on start
-    modelViewer.addEventListener('load', () => {
+    
+    function resetVisualStatesExcept(excludeAnimation) {
+        animationStates.forEach((state, name) => {
+            if (name !== excludeAnimation && state.isPlaying) {
+                state.isPlaying = false;
+                const button = document.getElementById(`btn-${name}`);
+                if (button) button.classList.remove('active');
+            }
+        });
+    }
+    
+    function resetAllAnimations() {
+        // Stop all animations
         modelViewer.pause();
+        currentAnimation = null;
+        
+        // Reset all states
+        animationStates.forEach((state, name) => {
+            state.isPlaying = false;
+            const button = document.getElementById(`btn-${name}`);
+            if (button) button.classList.remove('active');
+        });
+        
+        // Reset model to initial state
+        modelViewer.time = 0;
+        
+        // Visual feedback
+        const resetBtn = document.getElementById('btn-Reset');
+        resetBtn.style.background = '#28a745';
+        setTimeout(() => {
+            resetBtn.style.background = '';
+        }, 300);
+    }
+    
+    // Handle errors
+    modelViewer.addEventListener('error', (event) => {
+        console.error('Model viewer error:', event.detail);
+        loading.innerHTML = `
+            <div style="color: #ff6b6b; margin-bottom: 15px;">⚠️ Error loading model</div>
+            <p style="font-size: 12px; opacity: 0.8;">Check if toilet_final.glb is in the same folder</p>
+            <button onclick="location.reload()" style="margin-top: 15px; padding: 10px 20px; background: #007bff; border: none; border-radius: 8px; color: white; cursor: pointer;">
+                Retry
+            </button>
+        `;
     });
+    
+    // Touch gesture handling for mobile
+    let touchStartY = 0;
+    document.addEventListener('touchstart', (e) => {
+        touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+    
+    document.addEventListener('touchmove', (e) => {
+        if (!isInAR && e.touches.length === 1) {
+            const touchY = e.touches[0].clientY;
+            const deltaY = touchStartY - touchY;
+            
+            // Adjust camera orbit based on vertical swipe
+            if (Math.abs(deltaY) > 10) {
+                modelViewer.cameraOrbit += ` ${deltaY * 0.5}deg`;
+                touchStartY = touchY;
+            }
+        }
+    }, { passive: true });
 </script>
-
 </body>
 </html>
