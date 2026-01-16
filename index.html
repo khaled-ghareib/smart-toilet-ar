@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Toilet Pro AR</title>
+    <title>Icon Smart Toilet</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -23,23 +23,6 @@
             color: white;
             height: 100vh;
             width: 100vw;
-        }
-
-        #arButton {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, #007bff, #0056cc);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 25px;
-            font-weight: bold;
-            border: none;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
-            z-index: 1000;
-            cursor: pointer;
-            display: none;
         }
 
         #loading {
@@ -151,9 +134,9 @@
 
         #enterAR {
             position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: linear-gradient(135deg, #28a745, #20c997);
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #007bff, #0056cc);
             color: white;
             padding: 12px 24px;
             border-radius: 25px;
@@ -162,7 +145,7 @@
             cursor: pointer;
             z-index: 100;
             display: none;
-            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+            box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
         }
 
         #exitAR {
@@ -180,47 +163,27 @@
             display: none;
         }
 
-        #arInstructions {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.8);
-            padding: 15px 25px;
-            border-radius: 15px;
-            text-align: center;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            z-index: 50;
-            max-width: 90%;
-            display: none;
-        }
-
-        #arInstructions h2 {
-            font-size: 16px;
-            margin-bottom: 5px;
-            color: #007bff;
-        }
-
-        #arInstructions p {
-            font-size: 12px;
-            opacity: 0.8;
-        }
-
-        #desktopInstructions {
+        .title-bar {
             position: absolute;
             top: 20px;
             left: 50%;
             transform: translateX(-50%);
             background: rgba(0, 0, 0, 0.7);
-            padding: 15px 25px;
-            border-radius: 15px;
+            padding: 12px 24px;
+            border-radius: 12px;
             text-align: center;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             z-index: 50;
             max-width: 90%;
             display: none;
+        }
+
+        .title-bar h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            margin: 0;
         }
 
         @media (max-width: 768px) {
@@ -237,8 +200,8 @@
             }
             
             #enterAR {
-                bottom: 10px;
-                left: 10px;
+                top: 10px;
+                right: 10px;
                 padding: 10px 20px;
                 font-size: 14px;
             }
@@ -249,30 +212,30 @@
                 padding: 10px 20px;
                 font-size: 14px;
             }
+            
+            .title-bar {
+                top: 10px;
+                padding: 10px 20px;
+            }
+            
+            .title-bar h1 {
+                font-size: 16px;
+            }
         }
     </style>
 </head>
 <body>
 
-<button id="enterAR">Enter AR 👁️</button>
+<button id="enterAR">AR 👁️</button>
 <button id="exitAR">Exit AR</button>
 
-<div id="arInstructions">
-    <h2>AR Mode Active</h2>
-    <p>Move your device to look around</p>
-    <p>Tap on surfaces to place the toilet</p>
-</div>
-
-<div id="desktopInstructions">
-    <h2>Smart Toilet Pro</h2>
-    <p>Desktop: Right-click drag to rotate • Scroll to zoom</p>
-    <p>Mobile: One finger to rotate • Two fingers to zoom</p>
-    <p style="color: #007bff; margin-top: 10px;">Click "Enter AR 👁️" for Augmented Reality</p>
+<div class="title-bar">
+    <h1>Icon Smart Toilet</h1>
 </div>
 
 <div id="loading">
     <div class="loading-spinner"></div>
-    <p>Loading Smart Toilet Pro...</p>
+    <p>Loading Icon Smart Toilet...</p>
 </div>
 
 <div class="controls">
@@ -284,13 +247,9 @@
         <span class="status-indicator"></span>
         Seat
     </button>
-    <button id="btn-BidetCoverAction" data-animation="BidetCoverAction">
-        <span class="status-indicator"></span>
-        Bidet Lid
-    </button>
     <button id="btn-BidetAction" data-animation="BidetAction">
         <span class="status-indicator"></span>
-        Bidet Spray
+        Bidet
     </button>
     <button id="btn-AirventAction" data-animation="AirventAction">
         <span class="status-indicator"></span>
@@ -309,15 +268,19 @@
     let isAr = false;
     let arSession = null;
     let arHitTestSource = null;
-    let arHitTestSourceRequested = false;
     let arRefSpace = null;
     
     // Animation states
     const animationStates = {
         'CoverAction': { isOpen: false, action: null, clip: null },
         'SeatAction': { isOpen: false, action: null, clip: null },
-        'BidetCoverAction': { isOpen: false, action: null, clip: null },
-        'BidetAction': { isOpen: false, action: null, clip: null },
+        'BidetAction': { 
+            isOpen: false, 
+            action: null, 
+            clip: null,
+            isBidetLidOpen: false,
+            isBidetSpraying: false
+        },
         'AirventAction': { isOpen: false, action: null, clip: null }
     };
     
@@ -446,9 +409,9 @@
                 // Hide loading screen
                 document.getElementById('loading').style.display = 'none';
                 
-                // Show controls and instructions
+                // Show controls and title
                 document.querySelector('.controls').style.display = 'grid';
-                document.getElementById('desktopInstructions').style.display = 'block';
+                document.querySelector('.title-bar').style.display = 'block';
                 
                 console.log('Model loaded successfully!');
             },
@@ -488,15 +451,25 @@
         
         mixer = new THREE.AnimationMixer(model);
         
+        // Store all available animations
         gltf.animations.forEach(clip => {
             const name = clip.name;
-            if (animationStates[name]) {
-                animationStates[name].clip = clip;
-                animationStates[name].action = mixer.clipAction(clip);
-                animationStates[name].action.setEffectiveTimeScale(0);
+            if (name.includes('CoverAction') || name.includes('SeatAction') || 
+                name.includes('Bidet') || name.includes('AirventAction')) {
+                // We'll handle BidetAction specially
+                if (name === 'BidetAction' || name === 'BidetCoverAction') {
+                    animationStates.BidetAction.clip = clip;
+                    animationStates.BidetAction.action = mixer.clipAction(clip);
+                    animationStates.BidetAction.action.setEffectiveTimeScale(0);
+                } else if (animationStates[name]) {
+                    animationStates[name].clip = clip;
+                    animationStates[name].action = mixer.clipAction(clip);
+                    animationStates[name].action.setEffectiveTimeScale(0);
+                }
             }
         });
         
+        // Initialize all animations to start (closed position)
         Object.keys(animationStates).forEach(name => {
             const state = animationStates[name];
             if (state.action) {
@@ -524,17 +497,12 @@
                     console.log('AR is supported on this device');
                 } else {
                     console.log('AR is not supported on this device');
-                    // Show message to user
-                    document.getElementById('desktopInstructions').innerHTML += 
-                        '<p style="color:#ff4444; margin-top:10px;">AR not supported on this device</p>';
                 }
             }).catch(err => {
                 console.error('Error checking AR support:', err);
             });
         } else {
             console.log('WebXR not supported');
-            document.getElementById('desktopInstructions').innerHTML += 
-                '<p style="color:#ff4444; margin-top:10px;">WebXR not supported. Try Chrome on Android or Safari on iOS.</p>';
         }
     }
     
@@ -562,11 +530,10 @@
             
             // Hide desktop controls
             document.getElementById('enterAR').style.display = 'none';
-            document.getElementById('desktopInstructions').style.display = 'none';
+            document.querySelector('.title-bar').style.display = 'none';
             document.querySelector('.controls').style.display = 'none';
             
-            // Show AR instructions and exit button
-            document.getElementById('arInstructions').style.display = 'block';
+            // Show exit button
             document.getElementById('exitAR').style.display = 'block';
             
             // Disable orbit controls in AR
@@ -649,12 +616,7 @@
             
             // Position the model at the hit location
             model.position.setFromMatrixPosition(hitMatrix);
-            
-            // Make sure the model is visible
             model.visible = true;
-            
-            // Show a visual feedback (you could add an animation here)
-            console.log('Model placed at:', model.position);
         }
     }
     
@@ -673,11 +635,10 @@
         
         // Show desktop controls
         document.getElementById('enterAR').style.display = 'block';
-        document.getElementById('desktopInstructions').style.display = 'block';
+        document.querySelector('.title-bar').style.display = 'block';
         document.querySelector('.controls').style.display = 'grid';
         
-        // Hide AR instructions and exit button
-        document.getElementById('arInstructions').style.display = 'none';
+        // Hide exit button
         document.getElementById('exitAR').style.display = 'none';
         
         // Re-enable orbit controls
@@ -697,7 +658,12 @@
     }
     
     // Toggle animation
-    function toggleAnimation(animationName) {
+    async function toggleAnimation(animationName) {
+        if (animationName === 'BidetAction') {
+            await toggleBidet();
+            return;
+        }
+        
         const state = animationStates[animationName];
         if (!state || !state.action) {
             console.warn(`Animation "${animationName}" not found or not loaded`);
@@ -708,6 +674,7 @@
         updateButton(animationName);
         animateToState(animationName, state.isOpen ? 1 : 0);
         
+        // If cover is closing, also close seat
         if (animationName === 'CoverAction' && !state.isOpen) {
             const seatState = animationStates.SeatAction;
             if (seatState && seatState.action && seatState.isOpen) {
@@ -718,12 +685,71 @@
         }
     }
     
+    // Special function for bidet (opens lid, then activates spray)
+    async function toggleBidet() {
+        const state = animationStates.BidetAction;
+        if (!state || !state.action) {
+            console.warn('Bidet animation not found or not loaded');
+            return;
+        }
+        
+        const button = document.getElementById('btn-BidetAction');
+        
+        // If bidet is completely off, open lid first
+        if (!state.isOpen && !state.isBidetLidOpen && !state.isBidetSpraying) {
+            // Open lid
+            state.isBidetLidOpen = true;
+            button.innerHTML = '<span class="status-indicator"></span>Bidet Opening...';
+            button.classList.add('on');
+            animateToState('BidetAction', 0.3); // Assuming 0.3 is lid open position
+            
+            // Wait for lid to open, then start spray
+            setTimeout(() => {
+                state.isOpen = true;
+                state.isBidetSpraying = true;
+                updateButton('BidetAction');
+                animateToState('BidetAction', 1); // Full open with spray
+            }, 500);
+        }
+        // If lid is open but not spraying, start spray
+        else if (state.isBidetLidOpen && !state.isBidetSpraying) {
+            state.isOpen = true;
+            state.isBidetSpraying = true;
+            updateButton('BidetAction');
+            animateToState('BidetAction', 1); // Full spray
+        }
+        // If spraying, turn off spray but keep lid open
+        else if (state.isBidetSpraying) {
+            state.isOpen = false;
+            state.isBidetSpraying = false;
+            updateButton('BidetAction');
+            animateToState('BidetAction', 0.3); // Back to just lid open
+            
+            // Optionally close lid after delay
+            setTimeout(() => {
+                if (!state.isBidetSpraying) {
+                    state.isBidetLidOpen = false;
+                    state.isOpen = false;
+                    updateButton('BidetAction');
+                    animateToState('BidetAction', 0); // Fully closed
+                }
+            }, 3000); // Close lid after 3 seconds of no spray
+        }
+        // If lid is open but bidet is off, close lid
+        else if (state.isBidetLidOpen && !state.isOpen) {
+            state.isBidetLidOpen = false;
+            state.isOpen = false;
+            updateButton('BidetAction');
+            animateToState('BidetAction', 0); // Fully closed
+        }
+    }
+    
     // Animate to specific time
     function animateToState(animationName, targetProgress) {
         const state = animationStates[animationName];
         if (!state || !state.action) return;
         
-        const clipDuration = state.clip.duration;
+        const clipDuration = state.clip ? state.clip.duration : 1;
         const targetTime = targetProgress * clipDuration;
         
         state.action.paused = false;
@@ -750,16 +776,35 @@
         
         const indicator = button.querySelector('.status-indicator');
         
-        if (state.isOpen) {
-            button.classList.add('on');
-            button.classList.remove('off');
-            if (indicator) indicator.style.background = '#44ff44';
-            button.innerHTML = `<span class="status-indicator"></span>${animationName.replace('Action', '')} On`;
+        if (animationName === 'BidetAction') {
+            if (state.isBidetSpraying) {
+                button.classList.add('on');
+                button.classList.remove('off');
+                if (indicator) indicator.style.background = '#44ff44';
+                button.innerHTML = '<span class="status-indicator"></span>Bidet On';
+            } else if (state.isBidetLidOpen) {
+                button.classList.add('on');
+                button.classList.remove('off');
+                if (indicator) indicator.style.background = '#ffa500';
+                button.innerHTML = '<span class="status-indicator"></span>Bidet Ready';
+            } else {
+                button.classList.add('off');
+                button.classList.remove('on');
+                if (indicator) indicator.style.background = '#ff4444';
+                button.innerHTML = '<span class="status-indicator"></span>Bidet';
+            }
         } else {
-            button.classList.add('off');
-            button.classList.remove('on');
-            if (indicator) indicator.style.background = '#ff4444';
-            button.innerHTML = `<span class="status-indicator"></span>${animationName.replace('Action', '')} Off`;
+            if (state.isOpen) {
+                button.classList.add('on');
+                button.classList.remove('off');
+                if (indicator) indicator.style.background = '#44ff44';
+                button.innerHTML = `<span class="status-indicator"></span>${animationName.replace('Action', '')} On`;
+            } else {
+                button.classList.add('off');
+                button.classList.remove('on');
+                if (indicator) indicator.style.background = '#ff4444';
+                button.innerHTML = `<span class="status-indicator"></span>${animationName.replace('Action', '')}`;
+            }
         }
     }
     
@@ -767,7 +812,14 @@
     function resetAll() {
         Object.keys(animationStates).forEach(name => {
             const state = animationStates[name];
-            state.isOpen = false;
+            
+            if (name === 'BidetAction') {
+                state.isOpen = false;
+                state.isBidetLidOpen = false;
+                state.isBidetSpraying = false;
+            } else {
+                state.isOpen = false;
+            }
             
             if (state.action) {
                 animateToState(name, 0);
