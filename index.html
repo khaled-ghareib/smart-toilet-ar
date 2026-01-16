@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Toilet AR</title>
+    <title>Fixed Toilet AR</title>
     <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
     <style>
-        body { margin: 0; background: #000; font-family: sans-serif; color: white; overflow: hidden; }
+        body { margin: 0; background: #000; font-family: sans-serif; color: white; }
         model-viewer { width: 100vw; height: 100vh; }
         .controls {
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 90%; z-index: 10;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 90%;
         }
         button {
             padding: 16px; border-radius: 12px; border: 1px solid #444;
@@ -21,63 +21,67 @@
 </head>
 <body>
 
-<model-viewer id="toilet" src="toilet_final.glb" ar camera-controls autoplay="false" interaction-prompt="none">
+<model-viewer id="toilet" src="toilet_final.glb" ar camera-controls autoplay="false">
     <div class="controls">
-        <button id="btn-Cover" onclick="run('CoverAction', 'btn-Cover')">Cover</button>
-        <button id="btn-Seat" onclick="run('SeatAction', 'btn-Seat')">Seat</button>
-        <button id="btn-BidetCover" onclick="run('BidetCoverAction', 'btn-BidetCover')">Bidet Lid</button>
-        <button id="btn-Bidet" onclick="run('BidetAction', 'btn-Bidet')">Bidet</button>
-        <button id="btn-Airvent" onclick="run('AirventAction', 'btn-Airvent')">Air Vent</button>
-        <button id="btn-LED" onclick="run('LEDAction', 'btn-LED')">LED</button>
+        <button id="btn-Cover" onclick="handleAction('CoverAction', 'btn-Cover')">Cover</button>
+        <button id="btn-Seat" onclick="handleAction('SeatAction', 'btn-Seat')">Seat</button>
+        <button id="btn-BidetCover" onclick="handleAction('BidetCoverAction', 'btn-BidetCover')">Bidet Lid</button>
+        <button id="btn-Bidet" onclick="handleAction('BidetAction', 'btn-Bidet')">Bidet</button>
+        <button id="btn-Airvent" onclick="handleAction('AirventAction', 'btn-Airvent')">Air Vent</button>
+        <button id="btn-LED" onclick="handleAction('LEDAction', 'btn-LED')">LED</button>
     </div>
 </model-viewer>
 
 <script>
     const mv = document.querySelector('#toilet');
-    let states = {}; 
+    let actions = {}; // Store the animation clips here
 
-    function run(name, id) {
-        const btn = document.getElementById(id);
+    // This function runs once the model is fully loaded
+    mv.addEventListener('load', () => {
+        const symbol = Object.getOwnPropertySymbols(mv).find(s => s.description === 'scene');
+        const scene = mv[symbol];
         
-        // --- LOGIC RULES ---
-        if ((name === 'SeatAction' || name === 'BidetCoverAction') && !states['CoverAction']) {
-            alert("Open the Cover first!");
-            return;
-        }
+        // Access the Three.js mixer
+        mv.mixer = new THREE.AnimationMixer(scene);
+        
+        // Load all animations into the mixer as independent clips
+        mv.availableAnimations.forEach(name => {
+            const clip = THREE.AnimationClip.findByName(mv.getAnimations(), name);
+            if (clip) {
+                const action = mv.mixer.clipAction(clip);
+                action.setLoop(THREE.LoopOnce); // STOP LOOPING
+                action.clampWhenFinished = true; // STAY AT END FRAME
+                actions[name] = action;
+            }
+        });
 
-        // --- TOGGLE STATE ---
-        states[name] = !states[name];
-        mv.animationName = name;
+        // Start the internal update loop
+        const clock = new THREE.Clock();
+        const animate = () => {
+            requestAnimationFrame(animate);
+            if (mv.mixer) mv.mixer.update(clock.getDelta());
+        };
+        animate();
+    });
 
-        if (states[name]) {
-            // OPENING: Play forward and FREEZE at end
+    function handleAction(name, id) {
+        const btn = document.getElementById(id);
+        const action = actions[name];
+
+        if (!action) return;
+
+        if (!btn.classList.contains('active')) {
+            // OPENING
             btn.classList.add('active');
-            mv.timeScale = 1; 
-            mv.play({repetitions: 1});
-
-            // This listener kills the loop and holds the position
-            const clampOpen = () => {
-                if (states[name] && mv.animationName === name) {
-                    mv.pause(); // Stop the loop
-                }
-                mv.removeEventListener('finished', clampOpen);
-            };
-            mv.addEventListener('finished', clampOpen);
-
+            action.paused = false;
+            action.timeScale = 1; 
+            action.play();
         } else {
-            // CLOSING: Play in reverse and FREEZE at start
+            // CLOSING
             btn.classList.remove('active');
-            mv.timeScale = -1; 
-            mv.play({repetitions: 1});
-
-            const clampClosed = () => {
-                if (!states[name] && mv.animationName === name) {
-                    mv.pause();
-                    mv.currentTime = 0; // Ensure it's back to base pose
-                }
-                mv.removeEventListener('finished', clampClosed);
-            };
-            mv.addEventListener('finished', clampClosed);
+            action.paused = false;
+            action.timeScale = -1; // Play backwards
+            action.play();
         }
     }
 </script>
