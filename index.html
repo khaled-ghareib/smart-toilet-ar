@@ -132,84 +132,36 @@
             height: 100vh;
         }
 
-        /* Camera icon button */
-        #cameraButton {
+        /* AR Launch Button */
+        #arLaunchButton {
             position: absolute;
             top: 20px;
             right: 20px;
-            width: 44px;
-            height: 44px;
-            background: rgba(40, 40, 40, 0.9);
-            border-radius: 50%;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            cursor: pointer;
-            z-index: 100;
-            display: none;
-            transition: all 0.2s ease;
-        }
-
-        #cameraButton:hover {
-            background: rgba(60, 60, 60, 0.9);
-            transform: scale(1.1);
-        }
-
-        #cameraButton:active {
-            transform: scale(0.95);
-        }
-
-        #cameraButton::before {
-            content: "📷";
-            font-size: 20px;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-        }
-
-        #cameraButton.on {
-            background: linear-gradient(135deg, #007bff, #0056cc);
-            border-color: #007bff;
-        }
-
-        /* AR button */
-        #enterAR {
-            position: absolute;
-            top: 20px;
-            right: 74px; /* Position to left of camera button */
-            width: 44px;
-            height: 44px;
-            background: rgba(40, 40, 40, 0.9);
-            border-radius: 50%;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            cursor: pointer;
-            z-index: 100;
-            display: none;
-            transition: all 0.2s ease;
-        }
-
-        #enterAR:hover {
-            background: rgba(60, 60, 60, 0.9);
-            transform: scale(1.1);
-        }
-
-        #enterAR:active {
-            transform: scale(0.95);
-        }
-
-        #enterAR::before {
-            content: "👁️";
-            font-size: 20px;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-        }
-
-        #enterAR.on {
             background: linear-gradient(135deg, #28a745, #20c997);
-            border-color: #28a745;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        #arLaunchButton:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(40, 167, 69, 0.4);
+        }
+
+        #arLaunchButton:active {
+            transform: scale(0.95);
+        }
+
+        #arLaunchButton::before {
+            content: "👁️ Launch AR";
+            font-size: 14px;
         }
 
         #exitAR {
@@ -263,14 +215,16 @@
                 min-height: 45px;
             }
             
-            #cameraButton, #enterAR {
+            #arLaunchButton {
                 top: 10px;
-                width: 40px;
-                height: 40px;
+                right: 10px;
+                padding: 10px 20px;
+                font-size: 14px;
             }
             
-            #enterAR {
-                right: 60px;
+            #arLaunchButton::before {
+                content: "👁️ AR";
+                font-size: 13px;
             }
             
             #exitAR {
@@ -293,8 +247,7 @@
 </head>
 <body>
 
-<button id="enterAR" title="AR Mode"></button>
-<button id="cameraButton" title="Toggle Camera Controls"></button>
+<button id="arLaunchButton" title="Launch Augmented Reality"></button>
 <button id="exitAR">Exit AR</button>
 
 <div class="title-bar">
@@ -337,7 +290,6 @@
     let arSession = null;
     let arHitTestSource = null;
     let arRefSpace = null;
-    let cameraControlsEnabled = true;
     
     // Animation states
     const animationStates = {
@@ -472,10 +424,10 @@
                 // Hide loading screen
                 document.getElementById('loading').style.display = 'none';
                 
-                // Show controls, title, and camera button
+                // Show controls, title, and AR button
                 document.querySelector('.controls').style.display = 'grid';
                 document.querySelector('.title-bar').style.display = 'block';
-                document.getElementById('cameraButton').style.display = 'block';
+                document.getElementById('arLaunchButton').style.display = 'block';
                 
                 console.log('Model loaded successfully!');
             },
@@ -489,7 +441,7 @@
             function(error) {
                 console.error('Error loading model:', error);
                 document.getElementById('loading').innerHTML = `
-                    <div style="color: #ff4444; margin-bottom: 15px;">⚠️ Error loading model</div>
+                    <div style="color: #ff6b6b; margin-bottom: 15px;">⚠️ Error loading model</div>
                     <p style="font-size: 12px; opacity: 0.8;">${error.message}</p>
                     <button onclick="location.reload()" style="margin-top: 15px; padding: 10px 20px; background: #007bff; border: none; border-radius: 8px; color: white; cursor: pointer;">
                         Retry
@@ -549,36 +501,30 @@
         if ('xr' in navigator) {
             navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
                 if (supported) {
-                    document.getElementById('enterAR').style.display = 'block';
+                    document.getElementById('arLaunchButton').style.display = 'block';
                     console.log('AR is supported on this device');
                 } else {
                     console.log('AR is not supported on this device');
+                    document.getElementById('arLaunchButton').innerHTML = "AR Not Available";
+                    document.getElementById('arLaunchButton').style.opacity = '0.5';
+                    document.getElementById('arLaunchButton').style.cursor = 'not-allowed';
                 }
             }).catch(err => {
                 console.error('Error checking AR support:', err);
+                document.getElementById('arLaunchButton').innerHTML = "AR Error";
+                document.getElementById('arLaunchButton').style.opacity = '0.5';
+                document.getElementById('arLaunchButton').style.cursor = 'not-allowed';
             });
         } else {
             console.log('WebXR not supported');
+            document.getElementById('arLaunchButton').innerHTML = "AR Not Supported";
+            document.getElementById('arLaunchButton').style.opacity = '0.5';
+            document.getElementById('arLaunchButton').style.cursor = 'not-allowed';
         }
     }
     
-    // Toggle camera controls
-    function toggleCameraControls() {
-        cameraControlsEnabled = !cameraControlsEnabled;
-        controls.enabled = cameraControlsEnabled;
-        
-        const cameraButton = document.getElementById('cameraButton');
-        if (cameraControlsEnabled) {
-            cameraButton.classList.add('on');
-            cameraButton.title = "Camera Controls: ON";
-        } else {
-            cameraButton.classList.remove('on');
-            cameraButton.title = "Camera Controls: OFF";
-        }
-    }
-    
-    // Enter AR mode
-    async function enterAR() {
+    // Launch AR mode
+    async function launchAR() {
         if (!navigator.xr) {
             alert('WebXR not supported. Please use:\n• Chrome on Android\n• Safari on iOS 13+\n• Make sure you are using HTTPS');
             return;
@@ -600,8 +546,7 @@
             arSession = session;
             
             // Hide desktop controls
-            document.getElementById('enterAR').style.display = 'none';
-            document.getElementById('cameraButton').style.display = 'none';
+            document.getElementById('arLaunchButton').style.display = 'none';
             document.querySelector('.title-bar').style.display = 'none';
             document.querySelector('.controls').style.display = 'none';
             
@@ -706,8 +651,7 @@
         renderer.setAnimationLoop(null);
         
         // Show desktop controls
-        document.getElementById('enterAR').style.display = 'block';
-        document.getElementById('cameraButton').style.display = 'block';
+        document.getElementById('arLaunchButton').style.display = 'block';
         document.querySelector('.title-bar').style.display = 'block';
         document.querySelector('.controls').style.display = 'grid';
         
@@ -716,8 +660,6 @@
         
         // Re-enable orbit controls
         controls.enabled = true;
-        cameraControlsEnabled = true;
-        document.getElementById('cameraButton').classList.add('on');
         
         // Reset camera to default position
         camera.position.set(3, 2, 5);
@@ -892,7 +834,7 @@
             mixer.update(delta);
         }
         
-        if (!isAr && cameraControlsEnabled) {
+        if (!isAr) {
             controls.update();
         }
         
@@ -910,12 +852,8 @@
         });
         
         document.getElementById('btn-Reset').addEventListener('click', resetAll);
-        document.getElementById('enterAR').addEventListener('click', enterAR);
-        document.getElementById('cameraButton').addEventListener('click', toggleCameraControls);
+        document.getElementById('arLaunchButton').addEventListener('click', launchAR);
         document.getElementById('exitAR').addEventListener('click', exitAR);
-        
-        // Initialize camera button as ON
-        document.getElementById('cameraButton').classList.add('on');
         
         // Initialize Three.js
         init();
