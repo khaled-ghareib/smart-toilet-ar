@@ -132,20 +132,84 @@
             height: 100vh;
         }
 
-        #enterAR {
+        /* Camera icon button */
+        #cameraButton {
             position: absolute;
             top: 20px;
             right: 20px;
-            background: linear-gradient(135deg, #007bff, #0056cc);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 25px;
-            border: none;
-            font-weight: bold;
+            width: 44px;
+            height: 44px;
+            background: rgba(40, 40, 40, 0.9);
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
             cursor: pointer;
             z-index: 100;
             display: none;
-            box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        #cameraButton:hover {
+            background: rgba(60, 60, 60, 0.9);
+            transform: scale(1.1);
+        }
+
+        #cameraButton:active {
+            transform: scale(0.95);
+        }
+
+        #cameraButton::before {
+            content: "📷";
+            font-size: 20px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        #cameraButton.on {
+            background: linear-gradient(135deg, #007bff, #0056cc);
+            border-color: #007bff;
+        }
+
+        /* AR button */
+        #enterAR {
+            position: absolute;
+            top: 20px;
+            right: 74px; /* Position to left of camera button */
+            width: 44px;
+            height: 44px;
+            background: rgba(40, 40, 40, 0.9);
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            cursor: pointer;
+            z-index: 100;
+            display: none;
+            transition: all 0.2s ease;
+        }
+
+        #enterAR:hover {
+            background: rgba(60, 60, 60, 0.9);
+            transform: scale(1.1);
+        }
+
+        #enterAR:active {
+            transform: scale(0.95);
+        }
+
+        #enterAR::before {
+            content: "👁️";
+            font-size: 20px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        #enterAR.on {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            border-color: #28a745;
         }
 
         #exitAR {
@@ -199,11 +263,14 @@
                 min-height: 45px;
             }
             
-            #enterAR {
+            #cameraButton, #enterAR {
                 top: 10px;
-                right: 10px;
-                padding: 10px 20px;
-                font-size: 14px;
+                width: 40px;
+                height: 40px;
+            }
+            
+            #enterAR {
+                right: 60px;
             }
             
             #exitAR {
@@ -226,7 +293,8 @@
 </head>
 <body>
 
-<button id="enterAR">AR 👁️</button>
+<button id="enterAR" title="AR Mode"></button>
+<button id="cameraButton" title="Toggle Camera Controls"></button>
 <button id="exitAR">Exit AR</button>
 
 <div class="title-bar">
@@ -269,18 +337,13 @@
     let arSession = null;
     let arHitTestSource = null;
     let arRefSpace = null;
+    let cameraControlsEnabled = true;
     
     // Animation states
     const animationStates = {
         'CoverAction': { isOpen: false, action: null, clip: null },
         'SeatAction': { isOpen: false, action: null, clip: null },
-        'BidetAction': { 
-            isOpen: false, 
-            action: null, 
-            clip: null,
-            isBidetLidOpen: false,
-            isBidetSpraying: false
-        },
+        'BidetAction': { isOpen: false, action: null, clip: null },
         'AirventAction': { isOpen: false, action: null, clip: null }
     };
     
@@ -409,9 +472,10 @@
                 // Hide loading screen
                 document.getElementById('loading').style.display = 'none';
                 
-                // Show controls and title
+                // Show controls, title, and camera button
                 document.querySelector('.controls').style.display = 'grid';
                 document.querySelector('.title-bar').style.display = 'block';
+                document.getElementById('cameraButton').style.display = 'block';
                 
                 console.log('Model loaded successfully!');
             },
@@ -425,7 +489,7 @@
             function(error) {
                 console.error('Error loading model:', error);
                 document.getElementById('loading').innerHTML = `
-                    <div style="color: #ff6b6b; margin-bottom: 15px;">⚠️ Error loading model</div>
+                    <div style="color: #ff4444; margin-bottom: 15px;">⚠️ Error loading model</div>
                     <p style="font-size: 12px; opacity: 0.8;">${error.message}</p>
                     <button onclick="location.reload()" style="margin-top: 15px; padding: 10px 20px; background: #007bff; border: none; border-radius: 8px; color: white; cursor: pointer;">
                         Retry
@@ -454,18 +518,10 @@
         // Store all available animations
         gltf.animations.forEach(clip => {
             const name = clip.name;
-            if (name.includes('CoverAction') || name.includes('SeatAction') || 
-                name.includes('Bidet') || name.includes('AirventAction')) {
-                // We'll handle BidetAction specially
-                if (name === 'BidetAction' || name === 'BidetCoverAction') {
-                    animationStates.BidetAction.clip = clip;
-                    animationStates.BidetAction.action = mixer.clipAction(clip);
-                    animationStates.BidetAction.action.setEffectiveTimeScale(0);
-                } else if (animationStates[name]) {
-                    animationStates[name].clip = clip;
-                    animationStates[name].action = mixer.clipAction(clip);
-                    animationStates[name].action.setEffectiveTimeScale(0);
-                }
+            if (animationStates[name]) {
+                animationStates[name].clip = clip;
+                animationStates[name].action = mixer.clipAction(clip);
+                animationStates[name].action.setEffectiveTimeScale(0);
             }
         });
         
@@ -506,6 +562,21 @@
         }
     }
     
+    // Toggle camera controls
+    function toggleCameraControls() {
+        cameraControlsEnabled = !cameraControlsEnabled;
+        controls.enabled = cameraControlsEnabled;
+        
+        const cameraButton = document.getElementById('cameraButton');
+        if (cameraControlsEnabled) {
+            cameraButton.classList.add('on');
+            cameraButton.title = "Camera Controls: ON";
+        } else {
+            cameraButton.classList.remove('on');
+            cameraButton.title = "Camera Controls: OFF";
+        }
+    }
+    
     // Enter AR mode
     async function enterAR() {
         if (!navigator.xr) {
@@ -530,6 +601,7 @@
             
             // Hide desktop controls
             document.getElementById('enterAR').style.display = 'none';
+            document.getElementById('cameraButton').style.display = 'none';
             document.querySelector('.title-bar').style.display = 'none';
             document.querySelector('.controls').style.display = 'none';
             
@@ -635,6 +707,7 @@
         
         // Show desktop controls
         document.getElementById('enterAR').style.display = 'block';
+        document.getElementById('cameraButton').style.display = 'block';
         document.querySelector('.title-bar').style.display = 'block';
         document.querySelector('.controls').style.display = 'grid';
         
@@ -643,6 +716,8 @@
         
         // Re-enable orbit controls
         controls.enabled = true;
+        cameraControlsEnabled = true;
+        document.getElementById('cameraButton').classList.add('on');
         
         // Reset camera to default position
         camera.position.set(3, 2, 5);
@@ -659,11 +734,6 @@
     
     // Toggle animation
     async function toggleAnimation(animationName) {
-        if (animationName === 'BidetAction') {
-            await toggleBidet();
-            return;
-        }
-        
         const state = animationStates[animationName];
         if (!state || !state.action) {
             console.warn(`Animation "${animationName}" not found or not loaded`);
@@ -672,7 +742,13 @@
         
         state.isOpen = !state.isOpen;
         updateButton(animationName);
-        animateToState(animationName, state.isOpen ? 1 : 0);
+        
+        // For BidetAction, play both lid and spray in sequence
+        if (animationName === 'BidetAction') {
+            await playBidetAnimation(state.isOpen);
+        } else {
+            animateToState(animationName, state.isOpen ? 1 : 0);
+        }
         
         // If cover is closing, also close seat
         if (animationName === 'CoverAction' && !state.isOpen) {
@@ -685,63 +761,51 @@
         }
     }
     
-    // Special function for bidet (opens lid, then activates spray)
-    async function toggleBidet() {
+    // Play bidet animation sequence
+    async function playBidetAnimation(isOpening) {
         const state = animationStates.BidetAction;
-        if (!state || !state.action) {
-            console.warn('Bidet animation not found or not loaded');
-            return;
-        }
+        if (!state || !state.action) return;
         
-        const button = document.getElementById('btn-BidetAction');
-        
-        // If bidet is completely off, open lid first
-        if (!state.isOpen && !state.isBidetLidOpen && !state.isBidetSpraying) {
-            // Open lid
-            state.isBidetLidOpen = true;
-            button.innerHTML = '<span class="status-indicator"></span>Bidet Opening...';
-            button.classList.add('on');
-            animateToState('BidetAction', 0.3); // Assuming 0.3 is lid open position
+        if (isOpening) {
+            // Opening: play from 0 to 1 (both lid open and spray)
+            await animateToStateSequence('BidetAction', 0, 1, 2.0);
+        } else {
+            // Closing: play from 1 to 0 (spray stops, then lid closes)
+            await animateToStateSequence('BidetAction', 1, 0, 2.0);
+        }
+    }
+    
+    // Animate from start to end with duration
+    async function animateToStateSequence(animationName, startProgress, endProgress, duration) {
+        return new Promise((resolve) => {
+            const state = animationStates[animationName];
+            if (!state || !state.action) {
+                resolve();
+                return;
+            }
             
-            // Wait for lid to open, then start spray
-            setTimeout(() => {
-                state.isOpen = true;
-                state.isBidetSpraying = true;
-                updateButton('BidetAction');
-                animateToState('BidetAction', 1); // Full open with spray
-            }, 500);
-        }
-        // If lid is open but not spraying, start spray
-        else if (state.isBidetLidOpen && !state.isBidetSpraying) {
-            state.isOpen = true;
-            state.isBidetSpraying = true;
-            updateButton('BidetAction');
-            animateToState('BidetAction', 1); // Full spray
-        }
-        // If spraying, turn off spray but keep lid open
-        else if (state.isBidetSpraying) {
-            state.isOpen = false;
-            state.isBidetSpraying = false;
-            updateButton('BidetAction');
-            animateToState('BidetAction', 0.3); // Back to just lid open
+            const clipDuration = state.clip ? state.clip.duration : 1;
+            const startTime = startProgress * clipDuration;
+            const endTime = endProgress * clipDuration;
             
-            // Optionally close lid after delay
+            state.action.paused = false;
+            state.action.time = startTime;
+            state.action.setEffectiveTimeScale(1);
+            
+            // Calculate speed for desired duration
+            const timeDiff = endTime - startTime;
+            const speed = timeDiff / duration;
+            
+            state.action.timeScale = speed;
+            
+            // When animation reaches target, pause it
             setTimeout(() => {
-                if (!state.isBidetSpraying) {
-                    state.isBidetLidOpen = false;
-                    state.isOpen = false;
-                    updateButton('BidetAction');
-                    animateToState('BidetAction', 0); // Fully closed
-                }
-            }, 3000); // Close lid after 3 seconds of no spray
-        }
-        // If lid is open but bidet is off, close lid
-        else if (state.isBidetLidOpen && !state.isOpen) {
-            state.isBidetLidOpen = false;
-            state.isOpen = false;
-            updateButton('BidetAction');
-            animateToState('BidetAction', 0); // Fully closed
-        }
+                state.action.paused = true;
+                state.action.time = endTime;
+                state.action.timeScale = 0;
+                resolve();
+            }, duration * 1000);
+        });
     }
     
     // Animate to specific time
@@ -776,35 +840,16 @@
         
         const indicator = button.querySelector('.status-indicator');
         
-        if (animationName === 'BidetAction') {
-            if (state.isBidetSpraying) {
-                button.classList.add('on');
-                button.classList.remove('off');
-                if (indicator) indicator.style.background = '#44ff44';
-                button.innerHTML = '<span class="status-indicator"></span>Bidet On';
-            } else if (state.isBidetLidOpen) {
-                button.classList.add('on');
-                button.classList.remove('off');
-                if (indicator) indicator.style.background = '#ffa500';
-                button.innerHTML = '<span class="status-indicator"></span>Bidet Ready';
-            } else {
-                button.classList.add('off');
-                button.classList.remove('on');
-                if (indicator) indicator.style.background = '#ff4444';
-                button.innerHTML = '<span class="status-indicator"></span>Bidet';
-            }
+        if (state.isOpen) {
+            button.classList.add('on');
+            button.classList.remove('off');
+            if (indicator) indicator.style.background = '#44ff44';
+            button.innerHTML = `<span class="status-indicator"></span>${animationName.replace('Action', '')} On`;
         } else {
-            if (state.isOpen) {
-                button.classList.add('on');
-                button.classList.remove('off');
-                if (indicator) indicator.style.background = '#44ff44';
-                button.innerHTML = `<span class="status-indicator"></span>${animationName.replace('Action', '')} On`;
-            } else {
-                button.classList.add('off');
-                button.classList.remove('on');
-                if (indicator) indicator.style.background = '#ff4444';
-                button.innerHTML = `<span class="status-indicator"></span>${animationName.replace('Action', '')}`;
-            }
+            button.classList.add('off');
+            button.classList.remove('on');
+            if (indicator) indicator.style.background = '#ff4444';
+            button.innerHTML = `<span class="status-indicator"></span>${animationName.replace('Action', '')}`;
         }
     }
     
@@ -812,14 +857,7 @@
     function resetAll() {
         Object.keys(animationStates).forEach(name => {
             const state = animationStates[name];
-            
-            if (name === 'BidetAction') {
-                state.isOpen = false;
-                state.isBidetLidOpen = false;
-                state.isBidetSpraying = false;
-            } else {
-                state.isOpen = false;
-            }
+            state.isOpen = false;
             
             if (state.action) {
                 animateToState(name, 0);
@@ -854,7 +892,7 @@
             mixer.update(delta);
         }
         
-        if (!isAr) {
+        if (!isAr && cameraControlsEnabled) {
             controls.update();
         }
         
@@ -873,7 +911,11 @@
         
         document.getElementById('btn-Reset').addEventListener('click', resetAll);
         document.getElementById('enterAR').addEventListener('click', enterAR);
+        document.getElementById('cameraButton').addEventListener('click', toggleCameraControls);
         document.getElementById('exitAR').addEventListener('click', exitAR);
+        
+        // Initialize camera button as ON
+        document.getElementById('cameraButton').classList.add('on');
         
         // Initialize Three.js
         init();
