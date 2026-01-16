@@ -22,7 +22,6 @@
             width: 100vw;
         }
         
-        /* The viewer takes up the full screen */
         model-viewer {
             width: 100%;
             height: 100%;
@@ -30,7 +29,6 @@
             --progress-bar-color: transparent;
         }
 
-        /* Loading overlay */
         .loading {
             position: absolute;
             top: 50%;
@@ -58,7 +56,6 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Modern Glassmorphism Controls */
         .controls {
             position: absolute;
             bottom: 40px;
@@ -107,13 +104,17 @@
             transform: scale(0.95);
         }
 
-        button.active {
+        button.on {
             background: linear-gradient(135deg, #007bff, #0056cc);
             border-color: #007bff;
             box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
         }
 
-        /* AR button styling */
+        button.off {
+            background: linear-gradient(135deg, #6c757d, #495057);
+            border-color: #6c757d;
+        }
+
         .ar-button {
             position: absolute !important;
             top: 20px;
@@ -133,34 +134,16 @@
             content: '👁️ ';
         }
 
-        /* Instructions overlay */
-        .instructions {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
-            padding: 15px 25px;
-            border-radius: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            text-align: center;
-            z-index: 50;
-            max-width: 90%;
+        /* LED color indicator */
+        .led-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 5px;
+            display: inline-block;
+            transition: background-color 0.3s;
         }
 
-        .instructions h2 {
-            font-size: 14px;
-            margin-bottom: 5px;
-            color: #007bff;
-        }
-
-        .instructions p {
-            font-size: 12px;
-            opacity: 0.8;
-        }
-
-        /* Mobile-specific adjustments */
         @media (max-width: 768px) {
             .controls {
                 grid-template-columns: repeat(2, 1fr);
@@ -174,11 +157,6 @@
                 min-height: 45px;
             }
             
-            .instructions {
-                top: 10px;
-                padding: 10px 15px;
-            }
-            
             .ar-button {
                 top: 10px;
                 right: 10px;
@@ -190,7 +168,6 @@
 </head>
 <body>
 
-<!-- Loading screen -->
 <div id="loading" class="loading">
     <div class="loading-spinner"></div>
     <p>Loading Smart Toilet Pro...</p>
@@ -217,9 +194,6 @@
     xr-environment
     style="width: 100%; height: 100%;">
 
-    <!-- AR Button will be auto-injected by model-viewer -->
-    
-    <!-- Instructions -->
     <div class="instructions" slot="ar-button">
         <h2>Smart Toilet Pro AR</h2>
         <p>Tap AR button to place in your space</p>
@@ -227,161 +201,282 @@
 
 </model-viewer>
 
-<!-- Controls -->
 <div class="controls">
-    <button id="btn-CoverAction" data-animation="CoverAction">Toggle Cover</button>
-    <button id="btn-SeatAction" data-animation="SeatAction">Toggle Seat</button>
-    <button id="btn-BidetCoverAction" data-animation="BidetCoverAction">Bidet Lid</button>
-    <button id="btn-BidetAction" data-animation="BidetAction">Bidet Spray</button>
-    <button id="btn-AirventAction" data-animation="AirventAction">Air Vent</button>
-    <button id="btn-LEDAction" data-animation="LEDAction">LED Cycle</button>
-    <button id="btn-Reset" style="grid-column: span 2;">Reset All</button>
+    <button id="btn-CoverAction" data-animation="CoverAction" data-type="toggle">
+        <span class="led-indicator"></span>
+        Cover
+    </button>
+    <button id="btn-SeatAction" data-animation="SeatAction" data-type="toggle">
+        <span class="led-indicator"></span>
+        Seat
+    </button>
+    <button id="btn-BidetCoverAction" data-animation="BidetCoverAction" data-type="toggle">
+        <span class="led-indicator"></span>
+        Bidet Lid
+    </button>
+    <button id="btn-BidetAction" data-animation="BidetAction" data-type="toggle">
+        <span class="led-indicator"></span>
+        Bidet Spray
+    </button>
+    <button id="btn-AirventAction" data-animation="AirventAction" data-type="toggle">
+        <span class="led-indicator"></span>
+        Air Vent
+    </button>
+    <button id="btn-LEDAction" data-animation="LEDAction" data-type="cycle">
+        <span class="led-indicator"></span>
+        LED
+    </button>
+    <button id="btn-Reset" style="grid-column: span 2;">
+        Reset All
+    </button>
 </div>
 
 <script type="module">
     const modelViewer = document.querySelector('#toilet');
     const loading = document.getElementById('loading');
     
-    // Animation state management
-    const animationStates = new Map();
-    let currentAnimation = null;
-    let isInAR = false;
-    
-    // Define animation details - you'll need to adjust these based on your actual animation names
-    const animationConfigs = {
-        'CoverAction': { duration: 1000, direction: 'normal' },
-        'SeatAction': { duration: 800, direction: 'normal' },
-        'BidetCoverAction': { duration: 600, direction: 'normal' },
-        'BidetAction': { duration: 2000, direction: 'normal' },
-        'AirventAction': { duration: 1500, direction: 'normal' },
-        'LEDAction': { duration: 3000, direction: 'normal', loop: true }
+    // Animation state management - stores current state of each part
+    const animationStates = {
+        'CoverAction': { isOpen: false, progress: 0 },
+        'SeatAction': { isOpen: false, progress: 0 },
+        'BidetCoverAction': { isOpen: false, progress: 0 },
+        'BidetAction': { isOpen: false, progress: 0 },
+        'AirventAction': { isOpen: false, progress: 0 },
+        'LEDAction': { mode: 0, progress: 0 } // 0=off, 1=white, 2=blue, 3=warm
     };
     
-    // Initialize animation states
-    Object.keys(animationConfigs).forEach(name => {
-        animationStates.set(name, {
-            isPlaying: false,
-            progress: 0,
-            direction: 'forward'
-        });
-    });
+    // Animation blending configuration
+    const animationConfig = {
+        duration: 1000, // ms for animation
+        easing: 'cubic-bezier(0.4, 0, 0.2, 1)'
+    };
     
-    // Handle model load
-    modelViewer.addEventListener('load', () => {
+    // Store animation names from the model
+    let availableAnimations = [];
+    
+    // Initialize model
+    modelViewer.addEventListener('load', async () => {
         console.log('Model loaded successfully');
         loading.style.display = 'none';
         
         // Get available animations
-        const animations = modelViewer.availableAnimations;
-        console.log('Available animations:', animations);
+        availableAnimations = modelViewer.availableAnimations || [];
+        console.log('Available animations:', availableAnimations);
         
-        // Setup click handlers for all buttons
+        // Setup button handlers
         document.querySelectorAll('[data-animation]').forEach(button => {
             const animationName = button.getAttribute('data-animation');
-            button.addEventListener('click', () => toggleAnimation(animationName));
+            const type = button.getAttribute('data-type');
+            
+            button.addEventListener('click', () => {
+                if (type === 'cycle') {
+                    cycleAnimation(animationName);
+                } else {
+                    toggleAnimation(animationName);
+                }
+            });
+            
+            // Initialize button state
+            updateButtonState(button, animationName);
         });
         
         // Reset button
-        document.getElementById('btn-Reset').addEventListener('click', resetAllAnimations);
+        document.getElementById('btn-Reset').addEventListener('click', resetAll);
         
-        // Auto-hide instructions after 5 seconds
-        setTimeout(() => {
-            const instructions = document.querySelector('.instructions');
-            if (instructions) instructions.style.opacity = '0.5';
-        }, 5000);
+        // Hide loading
+        loading.style.display = 'none';
+        
+        // Stop auto-rotate in AR mode
+        modelViewer.addEventListener('ar-status', (event) => {
+            if (event.detail.status === 'session-started') {
+                modelViewer.autoRotate = false;
+            } else {
+                modelViewer.autoRotate = true;
+            }
+        });
     });
     
-    // Handle AR session
-    modelViewer.addEventListener('ar-status', (event) => {
-        isInAR = event.detail.status === 'session-started';
-        console.log('AR status:', event.detail.status, 'isInAR:', isInAR);
-        
-        if (isInAR) {
-            // Adjust UI for AR mode
-            document.querySelector('.controls').style.bottom = '20px';
-            document.querySelector('.instructions').style.display = 'none';
-        }
-    });
-    
-    // Animation control function
+    // Toggle animations without resetting others
     async function toggleAnimation(animationName) {
-        if (!modelViewer.model) {
-            console.error('Model not loaded yet');
+        const state = animationStates[animationName];
+        const button = document.getElementById(`btn-${animationName}`);
+        
+        if (!state) {
+            console.error(`No state found for ${animationName}`);
             return;
         }
         
-        const button = document.getElementById(`btn-${animationName}`);
-        const state = animationStates.get(animationName);
-        const config = animationConfigs[animationName];
+        // Toggle state
+        state.isOpen = !state.isOpen;
         
-        // If an animation is currently playing, stop it first
-        if (currentAnimation && currentAnimation !== animationName) {
-            modelViewer.pause();
+        // Update UI immediately
+        updateButtonState(button, animationName);
+        
+        // Get the animation duration
+        const duration = animationConfig.duration;
+        
+        try {
+            // Play the animation to its target state
+            await playAnimationToState(animationName, state.isOpen, duration);
+            
+            // If cover is closing, also close seat and bidet cover (optional)
+            if (animationName === 'CoverAction' && !state.isOpen) {
+                // Automatically close seat and bidet cover when main cover closes
+                if (animationStates.SeatAction.isOpen) {
+                    animationStates.SeatAction.isOpen = false;
+                    await playAnimationToState('SeatAction', false, duration);
+                    updateButtonState(document.getElementById('btn-SeatAction'), 'SeatAction');
+                }
+                
+                if (animationStates.BidetCoverAction.isOpen) {
+                    animationStates.BidetCoverAction.isOpen = false;
+                    await playAnimationToState('BidetCoverAction', false, duration);
+                    updateButtonState(document.getElementById('btn-BidetCoverAction'), 'BidetCoverAction');
+                }
+            }
+            
+            console.log(`${animationName} toggled to ${state.isOpen ? 'open' : 'closed'}`);
+        } catch (error) {
+            console.error(`Error playing ${animationName}:`, error);
+        }
+    }
+    
+    // Cycle through LED modes
+    function cycleAnimation(animationName) {
+        const state = animationStates[animationName];
+        const button = document.getElementById(`btn-${animationName}`);
+        const ledIndicator = button.querySelector('.led-indicator');
+        
+        if (!state) return;
+        
+        // Cycle through modes: 0=off, 1=white, 2=blue, 3=warm, 4=rainbow
+        state.mode = (state.mode + 1) % 5;
+        
+        // Update button text and LED color
+        const modeNames = ['Off', 'White', 'Blue', 'Warm', 'Rainbow'];
+        const modeColors = ['#666', '#ffffff', '#007bff', '#ff9900', 'linear-gradient(45deg, #ff0000, #00ff00, #0000ff)'];
+        
+        // Change LED indicator color
+        if (state.mode === 4) { // Rainbow
+            ledIndicator.style.background = modeColors[4];
+        } else {
+            ledIndicator.style.background = modeColors[state.mode];
         }
         
-        // Toggle animation state
-        state.isPlaying = !state.isPlaying;
+        // Update button class
+        button.className = state.mode > 0 ? 'on' : 'off';
         
-        if (state.isPlaying) {
-            // Play animation
-            button.classList.add('active');
+        console.log(`LED mode: ${modeNames[state.mode]}`);
+        
+        // Play LED animation based on mode
+        playLEDAnimation(state.mode);
+    }
+    
+    // Helper function to play animation to specific state
+    async function playAnimationToState(animationName, targetState, duration) {
+        return new Promise((resolve) => {
+            // Calculate time based on state (0=start, 1=end)
+            const targetTime = targetState ? 1 : 0;
+            
+            // Use model-viewer's animation API
             modelViewer.animationName = animationName;
             
-            if (config.loop) {
-                modelViewer.play({ repetitions: Infinity });
+            // Set the time directly (0 = start, 1 = end)
+            // This sets the pose without playing the timeline
+            modelViewer.time = targetTime;
+            
+            // For smooth transition, we could use animation mixer if available
+            // For now, we'll just set the pose directly
+            
+            // Resolve after a short delay to ensure the pose is set
+            setTimeout(resolve, 50);
+        });
+    }
+    
+    // Play LED animation based on mode
+    async function playLEDAnimation(mode) {
+        if (!availableAnimations.includes('LEDAction')) {
+            console.warn('LEDAction animation not found in model');
+            return;
+        }
+        
+        try {
+            switch(mode) {
+                case 0: // Off
+                    modelViewer.animationName = 'LEDAction';
+                    modelViewer.time = 0;
+                    modelViewer.pause();
+                    break;
+                case 1: // White
+                    modelViewer.animationName = 'LEDAction';
+                    modelViewer.time = 0.25; // Assuming your animation has different times for colors
+                    break;
+                case 2: // Blue
+                    modelViewer.animationName = 'LEDAction';
+                    modelViewer.time = 0.5;
+                    break;
+                case 3: // Warm
+                    modelViewer.animationName = 'LEDAction';
+                    modelViewer.time = 0.75;
+                    break;
+                case 4: // Rainbow (loop)
+                    modelViewer.animationName = 'LEDAction';
+                    modelViewer.play({ repetitions: Infinity });
+                    break;
+            }
+        } catch (error) {
+            console.error('Error playing LED animation:', error);
+        }
+    }
+    
+    // Update button visual state
+    function updateButtonState(button, animationName) {
+        const state = animationStates[animationName];
+        const ledIndicator = button.querySelector('.led-indicator');
+        
+        if (!state) return;
+        
+        if (animationName === 'LEDAction') {
+            // Handle LED separately
+            return;
+        }
+        
+        // For toggle animations
+        if (state.isOpen !== undefined) {
+            button.className = state.isOpen ? 'on' : 'off';
+            ledIndicator.style.background = state.isOpen ? '#00ff00' : '#ff0000';
+            button.innerHTML = `<span class="led-indicator"></span>${animationName.replace('Action', '')} ${state.isOpen ? 'On' : 'Off'}`;
+        }
+    }
+    
+    // Reset all animations to initial state
+    function resetAll() {
+        Object.keys(animationStates).forEach(name => {
+            const state = animationStates[name];
+            
+            if (name === 'LEDAction') {
+                state.mode = 0;
             } else {
-                modelViewer.play();
-                
-                // Set timeout to mark as not playing when done
-                setTimeout(() => {
-                    if (animationStates.get(animationName)) {
-                        animationStates.get(animationName).isPlaying = false;
-                        button.classList.remove('active');
-                    }
-                }, config.duration);
+                state.isOpen = false;
             }
             
-            currentAnimation = animationName;
-        } else {
-            // Stop animation
-            button.classList.remove('active');
-            modelViewer.pause();
+            // Reset the animation pose
+            if (availableAnimations.includes(name)) {
+                modelViewer.animationName = name;
+                modelViewer.time = 0;
+            }
             
-            if (config.loop) {
-                currentAnimation = null;
-            }
-        }
-        
-        // Master logic: If cover is closed, reset other states visually
-        if (animationName === 'CoverAction' && !state.isPlaying) {
-            resetVisualStatesExcept('CoverAction');
-        }
-    }
-    
-    function resetVisualStatesExcept(excludeAnimation) {
-        animationStates.forEach((state, name) => {
-            if (name !== excludeAnimation && state.isPlaying) {
-                state.isPlaying = false;
-                const button = document.getElementById(`btn-${name}`);
-                if (button) button.classList.remove('active');
-            }
-        });
-    }
-    
-    function resetAllAnimations() {
-        // Stop all animations
-        modelViewer.pause();
-        currentAnimation = null;
-        
-        // Reset all states
-        animationStates.forEach((state, name) => {
-            state.isPlaying = false;
+            // Update button
             const button = document.getElementById(`btn-${name}`);
-            if (button) button.classList.remove('active');
+            if (button) updateButtonState(button, name);
         });
         
-        // Reset model to initial state
-        modelViewer.time = 0;
+        // Reset LED specifically
+        const ledButton = document.getElementById('btn-LEDAction');
+        const ledIndicator = ledButton.querySelector('.led-indicator');
+        ledIndicator.style.background = '#666';
+        ledButton.className = 'off';
+        ledButton.innerHTML = `<span class="led-indicator"></span>LED Off`;
         
         // Visual feedback
         const resetBtn = document.getElementById('btn-Reset');
@@ -389,6 +484,8 @@
         setTimeout(() => {
             resetBtn.style.background = '';
         }, 300);
+        
+        console.log('All animations reset');
     }
     
     // Handle errors
@@ -403,24 +500,13 @@
         `;
     });
     
-    // Touch gesture handling for mobile
-    let touchStartY = 0;
-    document.addEventListener('touchstart', (e) => {
-        touchStartY = e.touches[0].clientY;
-    }, { passive: true });
-    
-    document.addEventListener('touchmove', (e) => {
-        if (!isInAR && e.touches.length === 1) {
-            const touchY = e.touches[0].clientY;
-            const deltaY = touchStartY - touchY;
-            
-            // Adjust camera orbit based on vertical swipe
-            if (Math.abs(deltaY) > 10) {
-                modelViewer.cameraOrbit += ` ${deltaY * 0.5}deg`;
-                touchStartY = touchY;
-            }
+    // Preload animations
+    async function preloadAnimations() {
+        // This ensures animations are ready
+        if (modelViewer.model && modelViewer.model.availableAnimations) {
+            availableAnimations = modelViewer.model.availableAnimations;
         }
-    }, { passive: true });
+    }
 </script>
 </body>
 </html>
