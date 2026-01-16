@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fixed Toilet AR</title>
+    <title>Smart Toilet Pro</title>
     <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
     <style>
-        body { margin: 0; background: #000; font-family: sans-serif; color: white; }
+        body { margin: 0; background: #000; font-family: -apple-system, sans-serif; color: white; }
         model-viewer { width: 100vw; height: 100vh; }
         .controls {
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
@@ -15,6 +15,7 @@
         button {
             padding: 16px; border-radius: 12px; border: 1px solid #444;
             background: rgba(30, 30, 30, 0.9); color: white; font-weight: bold;
+            transition: all 0.2s;
         }
         button.active { background: #007bff; border-color: #007bff; }
     </style>
@@ -23,39 +24,40 @@
 
 <model-viewer id="toilet" src="toilet_final.glb" ar camera-controls autoplay="false">
     <div class="controls">
-        <button id="btn-Cover" onclick="handleAction('CoverAction', 'btn-Cover')">Cover</button>
-        <button id="btn-Seat" onclick="handleAction('SeatAction', 'btn-Seat')">Seat</button>
-        <button id="btn-BidetCover" onclick="handleAction('BidetCoverAction', 'btn-BidetCover')">Bidet Lid</button>
-        <button id="btn-Bidet" onclick="handleAction('BidetAction', 'btn-Bidet')">Bidet</button>
-        <button id="btn-Airvent" onclick="handleAction('AirventAction', 'btn-Airvent')">Air Vent</button>
-        <button id="btn-LED" onclick="handleAction('LEDAction', 'btn-LED')">LED</button>
+        <button id="btn-CoverAction" onclick="handleAction('CoverAction')">Cover</button>
+        <button id="btn-SeatAction" onclick="handleAction('SeatAction')">Seat</button>
+        <button id="btn-BidetCoverAction" onclick="handleAction('BidetCoverAction')">Bidet Lid</button>
+        <button id="btn-BidetAction" onclick="handleAction('BidetAction')">Bidet</button>
+        <button id="btn-AirventAction" onclick="handleAction('AirventAction')">Air Vent</button>
+        <button id="btn-LEDAction" onclick="handleAction('LEDAction')">LED</button>
     </div>
 </model-viewer>
 
 <script>
     const mv = document.querySelector('#toilet');
-    let actions = {}; // Store the animation clips here
+    let actions = {}; 
+    let states = {
+        CoverAction: false, SeatAction: false, BidetAction: false, 
+        BidetCoverAction: false, AirventAction: false, LEDAction: false
+    };
 
-    // This function runs once the model is fully loaded
+    // Initialize the Three.js Mixer to allow multiple animations at once
     mv.addEventListener('load', () => {
         const symbol = Object.getOwnPropertySymbols(mv).find(s => s.description === 'scene');
         const scene = mv[symbol];
         
-        // Access the Three.js mixer
+        // Setup the mixer
         mv.mixer = new THREE.AnimationMixer(scene);
         
-        // Load all animations into the mixer as independent clips
-        mv.availableAnimations.forEach(name => {
-            const clip = THREE.AnimationClip.findByName(mv.getAnimations(), name);
-            if (clip) {
-                const action = mv.mixer.clipAction(clip);
-                action.setLoop(THREE.LoopOnce); // STOP LOOPING
-                action.clampWhenFinished = true; // STAY AT END FRAME
-                actions[name] = action;
-            }
+        // Map every animation found in your GLB file
+        mv.getAnimations().forEach(clip => {
+            const action = mv.mixer.clipAction(clip);
+            action.setLoop(THREE.LoopOnce); // Kill infinite loops
+            action.clampWhenFinished = true; // Hold final position
+            actions[clip.name] = action;
         });
 
-        // Start the internal update loop
+        // Run the internal update loop
         const clock = new THREE.Clock();
         const animate = () => {
             requestAnimationFrame(animate);
@@ -64,13 +66,15 @@
         animate();
     });
 
-    function handleAction(name, id) {
-        const btn = document.getElementById(id);
+    function handleAction(name) {
+        const btn = document.getElementById(`btn-${name}`);
         const action = actions[name];
-
         if (!action) return;
 
-        if (!btn.classList.contains('active')) {
+        // Toggle the state
+        states[name] = !states[name];
+
+        if (states[name]) {
             // OPENING
             btn.classList.add('active');
             action.paused = false;
@@ -82,6 +86,17 @@
             action.paused = false;
             action.timeScale = -1; // Play backwards
             action.play();
+
+            // --- THE MASTER CLOSE FEATURE ---
+            // If the Main Cover is closed, shut everything else too
+            if (name === 'CoverAction') {
+                Object.keys(states).forEach(key => {
+                    if (key !== 'CoverAction' && states[key] === true) {
+                        // Trigger the closing of each other active button
+                        handleAction(key); 
+                    }
+                });
+            }
         }
     }
 </script>
