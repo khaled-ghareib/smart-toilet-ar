@@ -3,107 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Toilet Pro</title>
+    <title>Smart Toilet Pro AR</title>
     <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
     <style>
-        body { margin: 0; background: #000; font-family: -apple-system, sans-serif; color: white; overflow: hidden; }
-        model-viewer { width: 100vw; height: 100vh; --poster-color: transparent; }
+        body { margin: 0; background: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: white; overflow: hidden; }
+        
+        /* The viewer takes up the full screen */
+        model-viewer {
+            width: 100vw;
+            height: 100vh;
+            background-color: #1a1a1a;
+        }
+
+        /* Modern Glassmorphism Controls */
         .controls {
-            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 90%;
-            max-width: 400px; z-index: 10;
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            width: 90%;
+            max-width: 400px;
+            z-index: 100;
         }
+
         button {
-            padding: 12px; border-radius: 8px; border: 1px solid #444;
-            background: rgba(30, 30, 30, 0.9); color: white; font-size: 14px;
-            transition: all 0.2s; cursor: pointer;
+            padding: 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(40, 40, 40, 0.8);
+            backdrop-filter: blur(10px);
+            color: white;
+            font-weight: 600;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
         }
-        button.active { background: #007bff; border-color: #007bff; }
+
+        button:active {
+            transform: scale(0.95);
+            background: #007bff;
+        }
+
+        button.active {
+            background: #007bff;
+            border-color: #007bff;
+            box-shadow: 0 0 15px rgba(0, 123, 255, 0.4);
+        }
+
+        /* Custom AR Button Styling */
+        #ar-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #fff;
+            color: #000;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            border: none;
+        }
     </style>
 </head>
 <body>
 
-<model-viewer id="toilet" src="toilet_final.glb" ar camera-controls touch-action="pan-y">
+<model-viewer id="toilet" 
+    src="toilet_final.glb" 
+    ar 
+    ar-modes="webxr scene-viewer quick-look" 
+    camera-controls 
+    poster="poster.webp" 
+    shadow-intensity="2" 
+    exposure="1"
+    environment-image="neutral">
+
     <div class="controls">
-        <button id="btn-CoverAction" onclick="handleAction('CoverAction')">Cover</button>
-        <button id="btn-SeatAction" onclick="handleAction('SeatAction')">Seat</button>
-        <button id="btn-BidetCoverAction" onclick="handleAction('BidetCoverAction')">Bidet Lid</button>
-        <button id="btn-BidetAction" onclick="handleAction('BidetAction')">Bidet</button>
-        <button id="btn-AirventAction" onclick="handleAction('AirventAction')">Air Vent</button>
-        <button id="btn-LEDAction" onclick="handleAction('LEDAction')">LED</button>
+        <button id="btn-CoverAction" onclick="toggleAnimation('CoverAction')">Toggle Cover</button>
+        <button id="btn-SeatAction" onclick="toggleAnimation('SeatAction')">Toggle Seat</button>
+        <button id="btn-BidetCoverAction" onclick="toggleAnimation('BidetCoverAction')">Bidet Lid</button>
+        <button id="btn-BidetAction" onclick="toggleAnimation('BidetAction')">Bidet Spray</button>
+        <button id="btn-AirventAction" onclick="toggleAnimation('AirventAction')">Air Vent</button>
+        <button id="btn-LEDAction" onclick="toggleAnimation('LEDAction')">LED Cycle</button>
     </div>
+
 </model-viewer>
 
 <script>
-    const mv = document.querySelector('#toilet');
-    let mixer, actions = {}, states = {};
+    const modelViewer = document.querySelector('#toilet');
+    const states = {}; // Keeps track of which animations are "open" or "closed"
 
-    mv.addEventListener('load', () => {
-        // 1. Access the internal Three.js scene and the Three object itself
-        const sceneSymbol = Object.getOwnPropertySymbols(mv).find(s => s.description === 'scene');
-        const scene = mv[sceneSymbol];
-        
-        // Model-viewer uses a bundled version of Three.js. 
-        // We need the constructor for AnimationMixer and LoopOnce.
-        const THREE = window.THREE || mv.constructor.THREE; 
-
-        if (!THREE || !scene) return;
-
-        mixer = new THREE.AnimationMixer(scene);
-        
-        // 2. Load animations into the mixer
-        mv.availableAnimations.forEach(clipName => {
-            const clip = scene.animations.find(a => a.name === clipName);
-            if (clip) {
-                const action = mixer.clipAction(clip);
-                action.setLoop(THREE.LoopOnce);
-                action.clampWhenFinished = true;
-                actions[clipName] = action;
-                states[clipName] = false;
-            }
-        });
-
-        // 3. Start the animation loop
-        const clock = new THREE.Clock();
-        const animate = () => {
-            requestAnimationFrame(animate);
-            if (mixer) mixer.update(clock.getDelta());
-        };
-        animate();
-    });
-
-    function handleAction(name) {
-        const action = actions[name];
+    function toggleAnimation(name) {
         const btn = document.getElementById(`btn-${name}`);
-        if (!action) return;
+        
+        // If it's the first time clicking, assume it's currently closed (false)
+        if (states[name] === undefined) states[name] = false;
 
+        // Toggle state
         states[name] = !states[name];
 
         if (states[name]) {
-            // OPENING: Play forward
+            // PLAY FORWARD
             btn.classList.add('active');
-            action.paused = false;
-            action.timeScale = 1;
-            action.play();
+            modelViewer.animationName = name;
+            modelViewer.play({ repetitions: 1 });
         } else {
-            // CLOSING: Play backward
+            // PLAY BACKWARD
+            // Note: Native <model-viewer> doesn't support easy reverse play via API.
+            // This will restart the animation for now. 
             btn.classList.remove('active');
-            action.paused = false;
-            action.timeScale = -1;
-            // If the animation finished forward, we must set time to end to play back
-            if (action.time === 0) action.time = action.getClip().duration;
-            action.play();
+            modelViewer.animationName = name;
+            modelViewer.play({ repetitions: 1 });
+        }
 
-            // Master Close Logic
-            if (name === 'CoverAction') {
-                Object.keys(states).forEach(key => {
-                    if (key !== 'CoverAction' && states[key] === true) {
-                        handleAction(key); 
-                    }
-                });
-            }
+        // Master Logic: If Cover is closed, reset other buttons visually
+        if (name === 'CoverAction' && states[name] === false) {
+            Object.keys(states).forEach(key => {
+                if (key !== 'CoverAction') {
+                    states[key] = false;
+                    document.getElementById(`btn-${key}`).classList.remove('active');
+                }
+            });
         }
     }
+
+    // Prevent auto-playing on start
+    modelViewer.addEventListener('load', () => {
+        modelViewer.pause();
+    });
 </script>
+
 </body>
 </html>
