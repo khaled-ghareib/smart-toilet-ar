@@ -3,111 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Toilet AR</title>
+    <title>Interactive Toilet AR</title>
     <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-    
     <style>
-        body { margin: 0; background-color: #000; font-family: -apple-system, sans-serif; color: white; overflow: hidden; }
+        body { margin: 0; background: #000; font-family: sans-serif; color: white; overflow: hidden; }
         model-viewer { width: 100vw; height: 100vh; }
-
-        .ui-panel {
+        .controls {
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-            width: 90%; max-width: 400px; display: grid; grid-template-columns: 1fr 1fr;
-            gap: 10px; z-index: 100;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 90%; z-index: 10;
         }
-
         button {
-            background: rgba(50, 50, 50, 0.9); backdrop-filter: blur(5px);
-            border: 1px solid #444; color: white; padding: 15px; border-radius: 12px;
-            font-size: 13px; font-weight: bold; cursor: pointer; transition: 0.2s;
-            -webkit-tap-highlight-color: transparent;
+            padding: 16px; border-radius: 12px; border: 1px solid #444;
+            background: rgba(30, 30, 30, 0.9); color: white; font-weight: bold;
         }
-
-        button:active { transform: scale(0.95); }
-        button.active { background: #007AFF; border-color: #007AFF; }
+        button.active { background: #007bff; border-color: #007bff; }
     </style>
 </head>
 <body>
 
-<model-viewer id="toilet" src="toilet_final.glb" ar ar-modes="webxr scene-viewer quick-look" 
-              camera-controls shadow-intensity="1" environment-image="neutral" 
-              autoplay="false" interaction-prompt="none">
-    
-    <div class="ui-panel">
+<model-viewer id="toilet" src="toilet_final.glb" ar camera-controls autoplay="false" interaction-prompt="none">
+    <div class="controls">
         <button id="btn-Cover" onclick="run('CoverAction', 'btn-Cover')">Cover</button>
         <button id="btn-Seat" onclick="run('SeatAction', 'btn-Seat')">Seat</button>
         <button id="btn-BidetCover" onclick="run('BidetCoverAction', 'btn-BidetCover')">Bidet Lid</button>
-        <button id="btn-Bidet" onclick="run('BidetAction', 'btn-Bidet')">Bidet Nozzle</button>
+        <button id="btn-Bidet" onclick="run('BidetAction', 'btn-Bidet')">Bidet</button>
         <button id="btn-Airvent" onclick="run('AirventAction', 'btn-Airvent')">Air Vent</button>
-        <button id="btn-LED" onclick="run('LEDAction', 'btn-LED')">LED Light</button>
+        <button id="btn-LED" onclick="run('LEDAction', 'btn-LED')">LED</button>
     </div>
-
 </model-viewer>
 
 <script>
     const mv = document.querySelector('#toilet');
-    
-    // Tracking states
-    let states = {
-        CoverAction: false,
-        SeatAction: false,
-        BidetAction: false,
-        BidetCoverAction: false,
-        AirventAction: false,
-        LEDAction: false
-    };
+    let states = {}; 
 
-    function run(animName, btnId) {
-        const btn = document.getElementById(btnId);
-
-        // --- 1. LOGIC CHECKS ---
-        // Can't move seat/bidet/vent if cover is closed
-        if ((animName === 'SeatAction' || animName === 'BidetCoverAction' || animName === 'AirventAction') && !states.CoverAction) {
-            alert("Please open the Main Cover first!");
-            return;
-        }
-        // Can't move nozzle if bidet lid is closed
-        if (animName === 'BidetAction' && !states.BidetCoverAction) {
-            alert("Please open the Bidet Lid first!");
+    function run(name, id) {
+        const btn = document.getElementById(id);
+        
+        // --- LOGIC RULES ---
+        if ((name === 'SeatAction' || name === 'BidetCoverAction') && !states['CoverAction']) {
+            alert("Open the Cover first!");
             return;
         }
 
-        // --- 2. TOGGLE STATE ---
-        states[animName] = !states[animName];
+        // --- TOGGLE STATE ---
+        states[name] = !states[name];
+        mv.animationName = name;
 
-        // --- 3. ANIMATION CONTROL ---
-        mv.animationName = animName;
-
-        if (states[animName]) {
-            // OPENING: Play once and stop at the end
+        if (states[name]) {
+            // OPENING: Play forward and FREEZE at end
             btn.classList.add('active');
             mv.timeScale = 1; 
-            mv.play({ repetitions: 1 });
-            
-            // This prevents the infinite looping
-            const stopAtEnd = () => {
-                if (states[animName]) mv.pause();
-                mv.removeEventListener('finished', stopAtEnd);
+            mv.play({repetitions: 1});
+
+            // This listener kills the loop and holds the position
+            const clampOpen = () => {
+                if (states[name] && mv.animationName === name) {
+                    mv.pause(); // Stop the loop
+                }
+                mv.removeEventListener('finished', clampOpen);
             };
-            mv.addEventListener('finished', stopAtEnd);
+            mv.addEventListener('finished', clampOpen);
 
         } else {
-            // CLOSING: Play in reverse
+            // CLOSING: Play in reverse and FREEZE at start
             btn.classList.remove('active');
-            mv.timeScale = -1;
-            mv.play({ repetitions: 1 });
+            mv.timeScale = -1; 
+            mv.play({repetitions: 1});
 
-            const stopAtStart = () => {
-                if (!states[animName]) {
+            const clampClosed = () => {
+                if (!states[name] && mv.animationName === name) {
                     mv.pause();
-                    mv.currentTime = 0; 
+                    mv.currentTime = 0; // Ensure it's back to base pose
                 }
-                mv.removeEventListener('finished', stopAtStart);
+                mv.removeEventListener('finished', clampClosed);
             };
-            mv.addEventListener('finished', stopAtStart);
+            mv.addEventListener('finished', clampClosed);
         }
     }
 </script>
-
 </body>
 </html>
