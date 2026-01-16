@@ -6,23 +6,24 @@
     <title>Smart Toilet Pro</title>
     <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
     <style>
-        body { margin: 0; background: #000; font-family: -apple-system, sans-serif; color: white; }
-        model-viewer { width: 100vw; height: 100vh; }
+        body { margin: 0; background: #000; font-family: -apple-system, sans-serif; color: white; overflow: hidden; }
+        model-viewer { width: 100vw; height: 100vh; --poster-color: transparent; }
         .controls {
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
             display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 90%;
+            max-width: 400px; z-index: 10;
         }
         button {
-            padding: 16px; border-radius: 12px; border: 1px solid #444;
-            background: rgba(30, 30, 30, 0.9); color: white; font-weight: bold;
-            transition: all 0.2s;
+            padding: 12px; border-radius: 8px; border: 1px solid #444;
+            background: rgba(30, 30, 30, 0.9); color: white; font-size: 14px;
+            transition: all 0.2s; cursor: pointer;
         }
         button.active { background: #007bff; border-color: #007bff; }
     </style>
 </head>
 <body>
 
-<model-viewer id="toilet" src="toilet_final.glb" ar camera-controls autoplay="false">
+<model-viewer id="toilet" src="toilet_final.glb" ar camera-controls touch-action="pan-y">
     <div class="controls">
         <button id="btn-CoverAction" onclick="handleAction('CoverAction')">Cover</button>
         <button id="btn-SeatAction" onclick="handleAction('SeatAction')">Seat</button>
@@ -35,64 +36,68 @@
 
 <script>
     const mv = document.querySelector('#toilet');
-    let actions = {}; 
-    let states = {
-        CoverAction: false, SeatAction: false, BidetAction: false, 
-        BidetCoverAction: false, AirventAction: false, LEDAction: false
-    };
+    let mixer, actions = {}, states = {};
 
-    // Initialize the Three.js Mixer to allow multiple animations at once
     mv.addEventListener('load', () => {
-        const symbol = Object.getOwnPropertySymbols(mv).find(s => s.description === 'scene');
-        const scene = mv[symbol];
+        // 1. Access the internal Three.js scene and the Three object itself
+        const sceneSymbol = Object.getOwnPropertySymbols(mv).find(s => s.description === 'scene');
+        const scene = mv[sceneSymbol];
         
-        // Setup the mixer
-        mv.mixer = new THREE.AnimationMixer(scene);
+        // Model-viewer uses a bundled version of Three.js. 
+        // We need the constructor for AnimationMixer and LoopOnce.
+        const THREE = window.THREE || mv.constructor.THREE; 
+
+        if (!THREE || !scene) return;
+
+        mixer = new THREE.AnimationMixer(scene);
         
-        // Map every animation found in your GLB file
-        mv.getAnimations().forEach(clip => {
-            const action = mv.mixer.clipAction(clip);
-            action.setLoop(THREE.LoopOnce); // Kill infinite loops
-            action.clampWhenFinished = true; // Hold final position
-            actions[clip.name] = action;
+        // 2. Load animations into the mixer
+        mv.availableAnimations.forEach(clipName => {
+            const clip = scene.animations.find(a => a.name === clipName);
+            if (clip) {
+                const action = mixer.clipAction(clip);
+                action.setLoop(THREE.LoopOnce);
+                action.clampWhenFinished = true;
+                actions[clipName] = action;
+                states[clipName] = false;
+            }
         });
 
-        // Run the internal update loop
+        // 3. Start the animation loop
         const clock = new THREE.Clock();
         const animate = () => {
             requestAnimationFrame(animate);
-            if (mv.mixer) mv.mixer.update(clock.getDelta());
+            if (mixer) mixer.update(clock.getDelta());
         };
         animate();
     });
 
     function handleAction(name) {
-        const btn = document.getElementById(`btn-${name}`);
         const action = actions[name];
+        const btn = document.getElementById(`btn-${name}`);
         if (!action) return;
 
-        // Toggle the state
         states[name] = !states[name];
 
         if (states[name]) {
-            // OPENING
+            // OPENING: Play forward
             btn.classList.add('active');
             action.paused = false;
-            action.timeScale = 1; 
+            action.timeScale = 1;
             action.play();
         } else {
-            // CLOSING
+            // CLOSING: Play backward
             btn.classList.remove('active');
             action.paused = false;
-            action.timeScale = -1; // Play backwards
+            action.timeScale = -1;
+            // If the animation finished forward, we must set time to end to play back
+            if (action.time === 0) action.time = action.getClip().duration;
             action.play();
 
-            // --- THE MASTER CLOSE FEATURE ---
-            // If the Main Cover is closed, shut everything else too
+            // Master Close Logic
             if (name === 'CoverAction') {
                 Object.keys(states).forEach(key => {
                     if (key !== 'CoverAction' && states[key] === true) {
-                        // Trigger the closing of each other active button
                         handleAction(key); 
                     }
                 });
