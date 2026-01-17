@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Icon Smart Toilet AR</title>
+    <title>Icon Smart Toilet</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/WebXR.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { margin: 0; overflow: hidden; font-family: -apple-system, sans-serif; background: #000; color: white; height: 100vh; }
@@ -42,38 +41,30 @@
             display: none; 
         }
         
-        #exitAR { 
-            position: absolute; 
-            top: 20px; 
-            left: 20px; 
-            background: rgba(255, 0, 0, 0.8); 
-            color: white; 
-            padding: 12px 24px; 
-            border-radius: 25px; 
-            border: none; 
-            font-weight: bold; 
-            cursor: pointer; 
-            z-index: 1000; 
-            display: none; 
-        }
-        
         .title-bar { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 12px 24px; border-radius: 12px; text-align: center; z-index: 50; max-width: 90%; display: none; }
         .title-bar h1 { font-size: 18px; font-weight: 600; color: white; margin: 0; }
+        
+        /* Hidden AR link */
+        #iosARLink { display: none; }
         
         @media (max-width: 768px) {
             .controls { bottom: 20px; padding: 12px; }
             button { font-size: 12px; padding: 12px 8px; min-height: 45px; }
-            #arButton, #exitAR, .title-bar { top: 10px; padding: 10px 20px; }
+            #arButton, .title-bar { top: 10px; padding: 10px 20px; }
             .title-bar h1 { font-size: 16px; }
             #arButton { right: 10px; font-size: 14px; }
-            #exitAR { left: 10px; font-size: 14px; }
         }
     </style>
 </head>
 <body>
 
+<!-- Hidden iOS AR Link - This is what actually triggers AR -->
+<a id="iosARLink" href="toilet_final.usdz" rel="ar">
+    <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTggMEMzLjYgMCAwIDMuNiAwIDhDMCAxMi40IDMuNiAxNiA4IDE2QzEyLjQgMTYgMTYgMTIuNCAxNiA4QzE2IDMuNiAxMi40IDAgOCAwWk04IDE0LjRDNC40IDE0LjQgMS41IDExLjUgMS41IDhDNS42IDEuNiAxMC40IDEuNiAxNC41IDhDMTQuNSAxMS41IDExLjYgMTQuNCA4IDE0LjRWMTQuNFpNOCAxMi44QzEwLjIgMTIuOCAxMiAxMSAxMiA4QzEyIDQuOCA5LjIgMiA4IDJDNi44IDIgNS42IDIuNyA0LjggMy45QzQuMSA1LjEgMy43IDYuNSAzLjcgOEMzLjcgMTEuMiA1LjggMTIuOCA4IDEyLjhWMTIuOFoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPgo=" alt="">
+    View in AR
+</a>
+
 <button id="arButton">AR 👁️</button>
-<button id="exitAR">Exit AR</button>
 
 <div class="title-bar">
     <h1>Icon Smart Toilet</h1>
@@ -105,19 +96,14 @@
 <script>
     // Scene setup
     let scene, camera, renderer, controls, mixer, model;
-    let isAR = false;
-    let arSession = null;
     
-    // FIXED: Store animation clips and actions separately
+    // Animation states
     const animationStates = {
         'CoverAction': { isOpen: false, action: null, clip: null },
         'SeatAction': { isOpen: false, action: null, clip: null },
         'BidetAction': { isOpen: false, action: null, clip: null },
         'AirventAction': { isOpen: false, action: null, clip: null }
     };
-    
-    // Store the current time for each animation
-    const animationTimes = {};
     
     function init() {
         // Create scene
@@ -128,22 +114,15 @@
         camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.set(3, 2, 5);
         
-        // Create renderer with WebXR support
-        renderer = new THREE.WebGLRenderer({ 
-            antialias: true, 
-            alpha: true,
-            powerPreference: "high-performance"
-        });
+        // Create renderer
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.shadowMap.enabled = true;
-        renderer.xr.enabled = true;
         document.body.appendChild(renderer.domElement);
         
-        // Add orbit controls (for non-AR mode)
+        // Add orbit controls
         controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
-        controls.dampingFactor = 0.1;
         controls.target.set(0, 0.5, 0);
         
         // Add lighting
@@ -198,27 +177,28 @@
                 
                 scene.add(model);
                 
-                // FIXED: Setup animations properly
+                // Setup animations if available
                 if (gltf.animations && gltf.animations.length > 0) {
                     console.log('✅ Animations found:', gltf.animations.map(a => a.name));
                     
                     mixer = new THREE.AnimationMixer(model);
                     
-                    // Initialize all animations to start (closed position)
                     gltf.animations.forEach(clip => {
                         const name = clip.name;
                         if (animationStates[name]) {
+                            // Create action and configure it properly
+                            const action = mixer.clipAction(clip);
+                            action.clampWhenFinished = true;
+                            action.loop = THREE.LoopOnce;
+                            action.timeScale = 0;
+                            
+                            animationStates[name].action = action;
                             animationStates[name].clip = clip;
-                            animationStates[name].action = mixer.clipAction(clip);
-                            animationStates[name].action.clampWhenFinished = true;
-                            animationStates[name].action.loop = THREE.LoopOnce;
                             
                             // Play but immediately pause at start
-                            animationStates[name].action.play();
-                            animationStates[name].action.paused = true;
-                            animationStates[name].action.time = 0;
-                            
-                            console.log(`✅ Setup animation: ${name} (duration: ${clip.duration}s)`);
+                            action.play();
+                            action.paused = true;
+                            action.time = 0;
                         }
                     });
                 } else {
@@ -251,131 +231,46 @@
     
     function setupARButton() {
         const arButton = document.getElementById('arButton');
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
         
-        // Check if WebXR is supported
-        if ('xr' in navigator) {
-            navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
-                if (supported) {
-                    console.log('✅ WebXR AR supported');
-                    arButton.style.display = 'block';
-                    arButton.onclick = startAR;
-                } else {
-                    console.log('⚠️ WebXR AR not supported');
-                    arButton.style.display = 'block';
-                    arButton.innerHTML = 'AR (Not Supported)';
-                    arButton.style.opacity = '0.5';
-                    arButton.style.cursor = 'not-allowed';
-                }
-            });
-        } else {
-            console.log('⚠️ WebXR not available');
+        if (isIOS) {
+            // iOS device - show AR button
             arButton.style.display = 'block';
-            arButton.innerHTML = 'AR (iOS Safari Only)';
-            arButton.onclick = () => {
-                alert('For AR:\n\n• iPhone/iPad: Use Safari on iOS 13+\n• Android: Use Chrome 81+\n• Make sure you use HTTPS, not file://');
+            arButton.onclick = launchIOSAR;
+        } else {
+            // For non-iOS, show message
+            arButton.style.display = 'block';
+            arButton.onclick = function() {
+                alert('For AR:\n\n• iPhone/iPad: Safari on iOS 12+\n• Android: Chrome 81+ with WebXR\n• Desktop: Chrome with WebXR flags enabled\n\nMake sure you use HTTPS (upload to GitHub Pages)!');
             };
         }
     }
     
-    async function startAR() {
-        if (!navigator.xr) {
-            alert('WebXR not supported. Use Safari on iPhone/iPad iOS 13+ or Chrome on Android.');
-            return;
-        }
+    function launchIOSAR() {
+        const arLink = document.getElementById('iosARLink');
         
-        try {
-            // Request AR session
-            const session = await navigator.xr.requestSession('immersive-ar', {
-                requiredFeatures: ['hit-test'],
-                optionalFeatures: ['dom-overlay'],
-                domOverlay: { root: document.body }
-            });
-            
-            console.log('✅ AR session started');
-            isAR = true;
-            arSession = session;
-            
-            // Set up the renderer for XR
-            renderer.xr.setSession(session);
-            
-            // Hide UI elements
-            document.getElementById('arButton').style.display = 'none';
-            document.querySelector('.title-bar').style.display = 'none';
-            document.querySelector('.controls').style.display = 'grid'; // Keep controls visible!
-            document.getElementById('exitAR').style.display = 'block';
-            
-            // Disable orbit controls in AR
-            controls.enabled = false;
-            
-            // Set up hit test for placing the model
-            const referenceSpace = await session.requestReferenceSpace('local');
-            const viewerSpace = await session.requestReferenceSpace('viewer');
-            const hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
-            
-            let placed = false;
-            
-            // Handle frame updates in AR
-            renderer.setAnimationLoop((timestamp, frame) => {
-                if (!placed && frame) {
-                    const hitTestResults = frame.getHitTestResults(hitTestSource);
-                    if (hitTestResults.length > 0) {
-                        const hit = hitTestResults[0];
-                        const hitMatrix = new THREE.Matrix4().fromArray(hit.getPose(referenceSpace).transform.matrix);
-                        
-                        // Position the model at the hit location
-                        model.position.setFromMatrixPosition(hitMatrix);
-                        model.rotation.y = Math.atan2(hitMatrix.elements[8], hitMatrix.elements[10]);
-                        placed = true;
-                    }
+        // Check if USDZ file exists by trying to load it
+        fetch('toilet_final.usdz')
+            .then(response => {
+                if (response.ok) {
+                    // USDZ exists, trigger AR
+                    console.log('USDZ file found, launching AR...');
+                    arLink.click();
+                } else {
+                    // USDZ doesn't exist
+                    alert('To use AR on iPhone:\n\n1. Convert your GLB file to USDZ format\n2. Name it "toilet_final.usdz"\n3. Place it in the same folder as this HTML file\n4. Refresh the page\n\nFor now, enjoy the 3D viewer!');
                 }
-                
-                // Update animations
-                if (mixer) {
-                    const delta = frame ? frame.time / 1000 : 0.016;
-                    mixer.update(delta);
-                }
-                
-                // Render the scene
-                renderer.render(scene, camera);
+            })
+            .catch(error => {
+                console.log('USDZ file not found');
+                alert('To use AR on iPhone:\n\n1. Convert your GLB file to USDZ format\n2. Name it "toilet_final.usdz"\n3. Place it in the same folder as this HTML file\n4. Refresh the page\n\nFor now, enjoy the 3D viewer!');
             });
-            
-            // Handle session end
-            session.addEventListener('end', () => {
-                console.log('AR session ended');
-                endAR();
-            });
-            
-        } catch (error) {
-            console.error('❌ Error starting AR:', error);
-            alert('Failed to start AR: ' + error.message + '\n\nRequirements:\n1. HTTPS connection (not file://)\n2. Camera permissions\n3. AR-capable device\n\nTry uploading to GitHub Pages for HTTPS.');
-        }
     }
     
-    function endAR() {
-        isAR = false;
-        arSession = null;
-        
-        // Stop XR animation loop
-        renderer.setAnimationLoop(null);
-        
-        // Show UI elements again
-        document.getElementById('arButton').style.display = 'block';
-        document.querySelector('.title-bar').style.display = 'block';
-        document.querySelector('.controls').style.display = 'grid';
-        document.getElementById('exitAR').style.display = 'none';
-        
-        // Re-enable orbit controls
-        controls.enabled = true;
-        
-        // Reset camera
-        camera.position.set(3, 2, 5);
-        controls.update();
-    }
-    
-    // FIXED: Proper animation toggle without resetting others
+    // Animation control - FIXED VERSION
     function toggleAnimation(animationName) {
         const state = animationStates[animationName];
-        if (!state || !state.action) {
+        if (!state || !state.action || !state.clip) {
             console.warn(`Animation "${animationName}" not available`);
             return;
         }
@@ -389,26 +284,27 @@
         // Get target time (1 = fully open, 0 = fully closed)
         const targetTime = state.isOpen ? state.clip.duration : 0;
         
-        // Animate to target
-        animateToTime(state.action, targetTime, 0.5);
+        // Smoothly animate to target time
+        animateToState(state.action, state.clip.duration, targetTime, 0.5);
         
         // Special logic: if closing cover, also close seat
         if (animationName === 'CoverAction' && !state.isOpen) {
             const seatState = animationStates.SeatAction;
             if (seatState && seatState.isOpen) {
-                seatState.isOpen = false;
-                updateButton('SeatAction');
-                animateToTime(seatState.action, 0, 0.5);
+                setTimeout(() => {
+                    seatState.isOpen = false;
+                    updateButton('SeatAction');
+                    animateToState(seatState.action, seatState.clip.duration, 0, 0.5);
+                }, 300);
             }
         }
     }
     
-    // Smooth animation to specific time
-    function animateToTime(action, targetTime, duration) {
+    function animateToState(action, clipDuration, targetTime, duration) {
         const startTime = action.time;
         const start = performance.now();
         
-        function updateAnimation() {
+        function update() {
             const elapsed = performance.now() - start;
             const progress = Math.min(elapsed / (duration * 1000), 1);
             
@@ -420,7 +316,7 @@
             action.time = startTime + (targetTime - startTime) * easedProgress;
             
             if (progress < 1) {
-                requestAnimationFrame(updateAnimation);
+                requestAnimationFrame(update);
             } else {
                 action.time = targetTime;
                 action.paused = true;
@@ -428,7 +324,7 @@
         }
         
         action.paused = false;
-        updateAnimation();
+        update();
     }
     
     function updateButton(animationName) {
@@ -456,9 +352,9 @@
             const state = animationStates[name];
             state.isOpen = false;
             
-            if (state.action) {
+            if (state.action && state.clip) {
                 // Animate back to start
-                animateToTime(state.action, 0, 0.5);
+                animateToState(state.action, state.clip.duration, 0, 0.5);
             }
             
             updateButton(name);
@@ -479,15 +375,13 @@
         
         const delta = clock.getDelta();
         
-        // Update animations if mixer exists
-        if (mixer && !isAR) {
+        // Update animations
+        if (mixer) {
             mixer.update(delta);
         }
         
-        // Update controls if not in AR
-        if (!isAR) {
-            controls.update();
-        }
+        // Update controls
+        controls.update();
         
         // Render scene
         renderer.render(scene, camera);
@@ -507,7 +401,6 @@
         });
         
         document.getElementById('btn-Reset').addEventListener('click', resetAll);
-        document.getElementById('exitAR').addEventListener('click', endAR);
         
         // Initialize the app
         init();
