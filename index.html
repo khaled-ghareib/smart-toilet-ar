@@ -3,27 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Icon Smart Toilet</title>
+    <title>Icon Smart Toilet - AR Fixed</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     
-    <!-- Essential AR meta tags -->
+    <!-- Critical AR meta tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-ar-content-mode" content="object">
     <meta name="supported-device-families" content="iphone, ipad">
+    <meta property="og:image" content="ar-preview.jpg">
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { margin: 0; overflow: hidden; font-family: -apple-system, sans-serif; background: #000; color: white; height: 100vh; }
         
-        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; background: rgba(0,0,0,0.7); padding: 20px; border-radius: 15px; }
+        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; background: rgba(0,0,0,0.9); padding: 25px; border-radius: 15px; z-index: 1000; }
         .loading-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #007bff; animation: spin 1s ease-in-out infinite; margin: 0 auto 15px; }
         @keyframes spin { to { transform: rotate(360deg); } }
         
         .controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; width: 90%; max-width: 400px; z-index: 100; padding: 15px; background: rgba(20,20,20,0.7); backdrop-filter: blur(20px); border-radius: 20px; display: none; }
         
-        button { padding: 14px 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(40,40,40,0.9); color: white; font-weight: 600; font-size: 13px; cursor: pointer; min-height: 50px; }
+        button { padding: 14px 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(40,40,40,0.9); color: white; font-weight: 600; font-size: 13px; cursor: pointer; min-height: 50px; transition: all 0.3s ease; }
         button.on { background: linear-gradient(135deg, #007bff, #0056cc); border-color: #007bff; }
         button.off { background: rgba(40,40,40,0.9); }
         
@@ -44,42 +45,103 @@
             font-weight: bold; 
             cursor: pointer; 
             z-index: 100; 
-            display: none; 
+            display: none;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
         }
         
-        .title-bar { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 12px 24px; border-radius: 12px; text-align: center; z-index: 50; max-width: 90%; display: none; }
+        #arButton.fixedAR {
+            background: linear-gradient(135deg, #ff6b35, #ff8e53);
+        }
+        
+        .title-bar { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 12px 24px; border-radius: 12px; text-align: center; z-index: 50; max-width: 90%; display: none; backdrop-filter: blur(10px); }
         .title-bar h1 { font-size: 18px; font-weight: 600; color: white; margin: 0; }
         
-        #arInstructions { 
+        #fixModal { 
             display: none; 
             position: fixed; 
             top: 0; left: 0; 
             width: 100%; height: 100%; 
             background: rgba(0,0,0,0.95); 
             color: white; 
-            z-index: 1000; 
-            padding: 30px; 
+            z-index: 2000; 
+            padding: 20px; 
             flex-direction: column; 
             justify-content: center; 
             align-items: center; 
-            text-align: center; 
-            backdrop-filter: blur(10px);
+            text-align: center;
         }
         
-        .instructions-content { 
-            background: rgba(30,30,30,0.9); 
+        .modal-content { 
+            background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
             padding: 30px; 
             border-radius: 20px; 
-            max-width: 500px; 
+            max-width: 600px; 
             width: 90%; 
             border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
         }
         
-        .instructions-content h2 { margin-bottom: 20px; color: #20c997; }
-        .instructions-content ol { text-align: left; margin: 20px 0; padding-left: 20px; }
-        .instructions-content li { margin-bottom: 10px; line-height: 1.5; }
-        .instructions-content code { background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+        .modal-content h2 { 
+            margin-bottom: 20px; 
+            color: #ff6b35; 
+            font-size: 24px;
+            background: linear-gradient(90deg, #ff6b35, #ff8e53);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .solution-box { 
+            background: rgba(0, 40, 80, 0.3); 
+            padding: 20px; 
+            border-radius: 12px; 
+            margin: 20px 0; 
+            border-left: 4px solid #007bff;
+            text-align: left;
+        }
+        
+        .solution-box.fix { 
+            background: rgba(80, 40, 0, 0.3); 
+            border-left: 4px solid #ff6b35;
+        }
+        
+        .solution-box h3 { margin-top: 0; color: #20c997; }
+        .solution-box.fix h3 { color: #ff8e53; }
+        
+        .code-block { 
+            background: rgba(0,0,0,0.5); 
+            padding: 15px; 
+            border-radius: 8px; 
+            font-family: 'Courier New', monospace; 
+            font-size: 13px; 
+            margin: 10px 0; 
+            overflow-x: auto;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .step { 
+            display: flex; 
+            align-items: flex-start; 
+            margin: 15px 0; 
+            padding: 10px; 
+            background: rgba(255,255,255,0.05); 
+            border-radius: 8px;
+        }
+        
+        .step-number { 
+            background: #007bff; 
+            color: white; 
+            width: 30px; 
+            height: 30px; 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            margin-right: 15px; 
+            flex-shrink: 0;
+            font-weight: bold;
+        }
+        
+        .step.fix .step-number { background: #ff6b35; }
         
         @media (max-width: 768px) {
             .controls { bottom: 20px; padding: 12px; }
@@ -87,61 +149,112 @@
             #arButton, .title-bar { top: 10px; padding: 10px 20px; }
             .title-bar h1 { font-size: 16px; }
             #arButton { right: 10px; font-size: 14px; }
-            .instructions-content { padding: 20px; }
+            .modal-content { padding: 20px 15px; }
+            .step { flex-direction: column; }
+            .step-number { margin-bottom: 10px; margin-right: 0; }
         }
     </style>
 </head>
 <body>
 
-<!-- AR Instructions Modal -->
-<div id="arInstructions">
-    <div class="instructions-content">
-        <h2>View in AR</h2>
-        <div style="margin-bottom: 25px;">
-            <div style="background: #0056cc; padding: 15px; border-radius: 10px; margin-bottom: 15px;">
-                <p><strong>For iPhone/iPad (Recommended):</strong></p>
+<!-- Fix Modal for Broken AR -->
+<div id="fixModal">
+    <div class="modal-content">
+        <h2>🚨 AR Model Fix Required</h2>
+        <p style="margin-bottom: 25px; color: #ccc;">Your 3D model appears broken in AR because it needs special preparation for iOS.</p>
+        
+        <div class="solution-box fix">
+            <h3>🔧 IMMEDIATE FIX:</h3>
+            <div class="step fix">
+                <div class="step-number">1</div>
+                <div>
+                    <strong>Download & Install Reality Converter</strong><br>
+                    <a href="https://developer.apple.com/augmented-reality/tools/" target="_blank" style="color: #20c997; text-decoration: underline;">Download from Apple</a>
+                </div>
             </div>
-            <ol>
-                <li><strong>File Check:</strong> Make sure <code>toilet_final.usdz</code> is in the same folder as this webpage</li>
-                <li><strong>Open in Safari:</strong> This only works in Safari browser on iOS</li>
-                <li><strong>Tap AR Button:</strong> The AR button at the top right</li>
-                <li><strong>Allow Camera:</strong> Grant camera permissions when prompted</li>
-            </ol>
+            
+            <div class="step fix">
+                <div class="step-number">2</div>
+                <div>
+                    <strong>Fix Your Model in Reality Converter:</strong>
+                    <ol style="margin: 10px 0 10px 20px;">
+                        <li>Open <code>toilet_final.glb</code> in Reality Converter</li>
+                        <li>Click <strong>"File → Update Materials"</strong></li>
+                        <li>Check <strong>"Compact Material Assets"</strong></li>
+                        <li>Export as USDZ</li>
+                    </ol>
+                </div>
+            </div>
+            
+            <div class="step fix">
+                <div class="step-number">3</div>
+                <div>
+                    <strong>Alternative Quick Fix (Blender):</strong>
+                    <div class="code-block">
+// In Blender:<br>
+// 1. Select all objects (A)<br>
+// 2. File → Export → glTF 2.0<br>
+// 3. CHECK THESE SETTINGS:<br>
+//    ✓ Convert to Y up (Z forward)<br>
+//    ✓ Apply Modifiers<br>
+//    ✓ Include UVs<br>
+//    ✓ Embed Textures<br>
+// 4. Export, then convert to USDZ
+                    </div>
+                </div>
+            </div>
         </div>
         
-        <div style="background: #444; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-            <p><strong>⚠️ If AR doesn't work:</strong></p>
-            <p style="font-size: 14px; margin-top: 10px;">
-                1. Download the USDZ file separately<br>
-                2. Open it in Files app on iOS<br>
-                3. Tap "Share" → "AR Quick Look"
-            </p>
+        <div class="solution-box">
+            <h3>✅ WHY THIS HAPPENS:</h3>
+            <p>AR Quick Look needs <strong>USDZ format with Apple-compatible materials</strong>. Regular GLB → USDZ conversion often breaks materials, causing the "broken apart" look.</p>
         </div>
         
-        <div style="display: flex; gap: 15px; margin-top: 20px;">
-            <button onclick="closeInstructions()" style="
+        <div style="display: flex; gap: 15px; margin-top: 30px; flex-wrap: wrap;">
+            <button onclick="closeFixModal()" style="
                 flex: 1;
+                min-width: 120px;
                 background: #444;
                 color: white;
                 border: 1px solid #666;
-                padding: 12px;
-                border-radius: 10px;
+                padding: 15px;
+                border-radius: 12px;
                 cursor: pointer;
+                font-weight: bold;
             ">Close</button>
-            <button onclick="testAR()" style="
+            
+            <button onclick="tryAlternativeAR()" style="
                 flex: 1;
+                min-width: 120px;
                 background: linear-gradient(135deg, #28a745, #20c997);
                 color: white;
                 border: none;
-                padding: 12px;
-                border-radius: 10px;
+                padding: 15px;
+                border-radius: 12px;
                 cursor: pointer;
                 font-weight: bold;
-            ">Try AR Again</button>
+            ">Try Alternative AR</button>
+            
+            <button onclick="openModelFixingService()" style="
+                flex: 1;
+                min-width: 120px;
+                background: linear-gradient(135deg, #ff6b35, #ff8e53);
+                color: white;
+                border: none;
+                padding: 15px;
+                border-radius: 12px;
+                cursor: pointer;
+                font-weight: bold;
+            ">Get Fixed Model</button>
         </div>
+        
+        <p style="margin-top: 25px; font-size: 12px; color: #888;">
+            💡 <strong>Tip:</strong> After fixing, rename the USDZ file to <code>toilet_fixed.usdz</code> and update the AR link above.
+        </p>
     </div>
 </div>
 
+<!-- AR Button with smart detection -->
 <button id="arButton">👁️ View in AR</button>
 
 <div class="title-bar">
@@ -150,7 +263,7 @@
 
 <div id="loading">
     <div class="loading-spinner"></div>
-    <p>Loading Icon Smart Toilet...</p>
+    <p id="loadingText">Loading Icon Smart Toilet...</p>
 </div>
 
 <div class="controls">
@@ -185,7 +298,11 @@
     
     // AR Support Detection
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isMac = /Mac/.test(navigator.platform);
     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    
+    // Track if we've shown the broken model warning
+    let hasShownBrokenWarning = false;
     
     function init() {
         // Create scene
@@ -222,15 +339,8 @@
         // Load the 3D model
         loadModel();
         
-        // Show AR button if on compatible device
-        if (isIOS) {
-            document.getElementById('arButton').style.display = 'block';
-        } else {
-            // Show AR button for all, but with different text
-            document.getElementById('arButton').style.display = 'block';
-            document.getElementById('arButton').textContent = '👁️ AR (iPhone Only)';
-            document.getElementById('arButton').style.background = 'linear-gradient(135deg, #666, #444)';
-        }
+        // Configure AR button based on platform
+        configureARButton();
         
         // Start animation loop
         animate();
@@ -241,6 +351,46 @@
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
+    }
+    
+    function configureARButton() {
+        const arButton = document.getElementById('arButton');
+        
+        if (isIOS) {
+            // iOS devices
+            arButton.style.display = 'block';
+            arButton.innerHTML = '👁️ View in AR';
+            arButton.classList.remove('fixedAR');
+            
+            // Check if USDZ exists
+            checkUSDZFile().then(exists => {
+                if (!exists) {
+                    arButton.innerHTML = '⚠️ AR Needs Setup';
+                    arButton.classList.add('fixedAR');
+                }
+            });
+            
+        } else if (isMac) {
+            // macOS
+            arButton.style.display = 'block';
+            arButton.innerHTML = '📱 AR (iPhone Only)';
+            arButton.style.background = 'linear-gradient(135deg, #666, #444)';
+            
+        } else {
+            // Other devices
+            arButton.style.display = 'block';
+            arButton.innerHTML = '📱 AR Requires iPhone';
+            arButton.style.background = 'linear-gradient(135deg, #333, #555)';
+        }
+    }
+    
+    async function checkUSDZFile() {
+        try {
+            const response = await fetch('toilet_final.usdz', { method: 'HEAD' });
+            return response.ok;
+        } catch {
+            return false;
+        }
     }
     
     function loadModel() {
@@ -254,6 +404,9 @@
                 console.log('✅ Model loaded successfully');
                 model = gltf.scene;
                 
+                // Check model integrity
+                checkModelHealth(model);
+                
                 // Center the model
                 const box = new THREE.Box3().setFromObject(model);
                 const center = box.getCenter(new THREE.Vector3());
@@ -263,6 +416,12 @@
                 model.position.x = -center.x;
                 model.position.y = -center.y + (size.y / 2);
                 model.position.z = -center.z;
+                
+                // Scale check for AR compatibility
+                const maxDimension = Math.max(size.x, size.y, size.z);
+                if (maxDimension > 10) {
+                    console.warn('⚠️ Model might be too large for AR');
+                }
                 
                 scene.add(model);
                 
@@ -300,93 +459,180 @@
             },
             (xhr) => {
                 const percent = (xhr.loaded / xhr.total * 100).toFixed(2);
-                document.getElementById('loading').querySelector('p').textContent = `Loading: ${percent}%`;
+                document.getElementById('loadingText').textContent = `Loading: ${percent}%`;
             },
             (error) => {
                 console.error('❌ Error loading model:', error);
                 document.getElementById('loading').innerHTML = `
                     <div style="color: #ff6b6b; margin-bottom: 15px;">⚠️ Error loading model</div>
-                    <p style="font-size: 12px; margin-bottom: 10px;">Make sure toilet_final.glb is in the same folder</p>
-                    <p style="font-size: 10px; color: #aaa;">Error: ${error.message || 'Unknown error'}</p>
+                    <p style="font-size: 12px; margin-bottom: 10px;">File <code>toilet_final.glb</code> not found or corrupted</p>
+                    <button onclick="location.reload()" style="
+                        background: #007bff;
+                        color: white;
+                        border: none;
+                        padding: 8px 16px;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        margin-top: 10px;
+                    ">Retry</button>
                 `;
             }
         );
     }
     
-    // Improved AR Button Handler
-    document.getElementById('arButton').addEventListener('click', function() {
+    function checkModelHealth(model) {
+        let meshCount = 0;
+        let materialCount = 0;
+        let textureCount = 0;
+        
+        model.traverse((child) => {
+            if (child.isMesh) {
+                meshCount++;
+                if (child.material) {
+                    if (Array.isArray(child.material)) {
+                        materialCount += child.material.length;
+                    } else {
+                        materialCount++;
+                    }
+                }
+            }
+        });
+        
+        console.log(`🔍 Model Health Check:`);
+        console.log(`   Meshes: ${meshCount}`);
+        console.log(`   Materials: ${materialCount}`);
+        
+        // Warn if too many meshes (bad for AR)
+        if (meshCount > 50) {
+            console.warn('⚠️ High mesh count may cause AR issues');
+        }
+    }
+    
+    // SMART AR Button Handler
+    document.getElementById('arButton').addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        if (this.classList.contains('fixedAR') || this.innerHTML.includes('Needs Setup')) {
+            // Show the fix modal immediately
+            showFixModal();
+            return;
+        }
+        
         if (isIOS && isSafari) {
-            // iOS Safari - try AR Quick Look
-            launchARQuickLook();
+            // iOS Safari - try AR with fallback
+            launchARWithFallback();
         } else {
-            // Show instructions
-            showInstructions();
+            // Show platform-specific instructions
+            showFixModal();
         }
     });
     
-    function launchARQuickLook() {
-        console.log('Attempting to launch AR Quick Look...');
+    function launchARWithFallback() {
+        console.log('Launching AR with fallback...');
         
-        // Method 1: Create a temporary AR link
-        const arLink = document.createElement('a');
-        arLink.href = 'toilet_final.usdz';
-        arLink.setAttribute('rel', 'ar');
-        
-        // Add required AR attributes
-        arLink.innerHTML = `
-            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiMwMDU2Y2MiLz4KICA8dGV4dCB4PSI1MCIgeT0iNTAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiPkFSIFZpZXc8L3RleHQ+Cjwvc3ZnPg==" 
-                 style="width:100px;height:100px;border-radius:10px;" 
-                 alt="AR Preview">
-        `;
-        
-        // Add to body and trigger click
-        document.body.appendChild(arLink);
-        arLink.click();
-        
-        // Clean up
-        setTimeout(() => {
-            if (document.body.contains(arLink)) {
-                document.body.removeChild(arLink);
+        // First check if USDZ exists
+        checkUSDZFile().then(exists => {
+            if (!exists) {
+                showFixModal();
+                return;
             }
-        }, 100);
-        
-        // Fallback after 2 seconds
-        setTimeout(() => {
-            const anyARActive = document.querySelector('[rel="ar"]:active') || 
-                               document.querySelector('[rel="ar"]:focus');
-            if (!anyARActive) {
-                console.log('AR launch may have failed, showing instructions');
-                showInstructions();
-            }
-        }, 2000);
-    }
-    
-    function showInstructions() {
-        document.getElementById('arInstructions').style.display = 'flex';
-    }
-    
-    function closeInstructions() {
-        document.getElementById('arInstructions').style.display = 'none';
-    }
-    
-    function testAR() {
-        closeInstructions();
-        
-        // Create a test link to check if USDZ exists
-        fetch('toilet_final.usdz')
-            .then(response => {
-                if (response.ok) {
-                    launchARQuickLook();
-                } else {
-                    alert('USDZ file not found. Please ensure toilet_final.usdz is in the same folder as this webpage.');
+            
+            // Try to launch AR
+            const arLink = document.createElement('a');
+            arLink.href = 'toilet_final.usdz';
+            arLink.setAttribute('rel', 'ar');
+            arLink.setAttribute('id', 'tempARLink');
+            
+            // Create a preview image for AR
+            const img = document.createElement('img');
+            img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiMwMDU2Y2MiLz48dGV4dCB4PSIxMDAiIHk9IjEwMCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjI0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSI+QVItVmlldzwvdGV4dD48L3N2Zz4=';
+            img.alt = 'AR Preview';
+            img.style.cssText = 'width:200px;height:200px;border-radius:20px;';
+            
+            arLink.appendChild(img);
+            document.body.appendChild(arLink);
+            
+            // Store the time we triggered AR
+            const arStartTime = Date.now();
+            
+            // Trigger click
+            arLink.click();
+            
+            // Check if AR opened successfully
+            setTimeout(() => {
+                // If we're still on the page after 2 seconds, AR probably failed
+                if (Date.now() - arStartTime > 2000) {
+                    // AR likely failed - check if model is broken
+                    if (!hasShownBrokenWarning) {
+                        showFixModal();
+                        hasShownBrokenWarning = true;
+                    }
                 }
-            })
-            .catch(() => {
-                alert('Cannot find toilet_final.usdz file. This is required for AR.\n\nPlease ensure the file exists in the same folder.');
-            });
+                
+                // Clean up
+                if (arLink.parentNode) {
+                    arLink.parentNode.removeChild(arLink);
+                }
+            }, 2000);
+        });
     }
     
-    // Animation control
+    function showFixModal() {
+        document.getElementById('fixModal').style.display = 'flex';
+    }
+    
+    function closeFixModal() {
+        document.getElementById('fixModal').style.display = 'none';
+    }
+    
+    function tryAlternativeAR() {
+        closeFixModal();
+        
+        // Try alternative AR methods
+        const alternatives = [
+            'toilet_fixed.usdz',
+            'toilet_ar.usdz',
+            'toilet_optimized.usdz'
+        ];
+        
+        let found = false;
+        
+        // Check each alternative
+        alternatives.forEach(filename => {
+            if (!found) {
+                fetch(filename, { method: 'HEAD' })
+                    .then(response => {
+                        if (response.ok) {
+                            console.log(`Found alternative: ${filename}`);
+                            // Launch AR with alternative file
+                            const arLink = document.createElement('a');
+                            arLink.href = filename;
+                            arLink.setAttribute('rel', 'ar');
+                            document.body.appendChild(arLink);
+                            arLink.click();
+                            setTimeout(() => {
+                                if (arLink.parentNode) arLink.parentNode.removeChild(arLink);
+                            }, 100);
+                            found = true;
+                        }
+                    })
+                    .catch(() => {});
+            }
+        });
+        
+        if (!found) {
+            setTimeout(() => {
+                alert('No alternative AR files found. Please fix the model using the instructions above.');
+            }, 1000);
+        }
+    }
+    
+    function openModelFixingService() {
+        // Open online USDZ fixing service
+        window.open('https://products.aspose.com/3d/glb-to-usdz', '_blank');
+    }
+    
+    // Animation control functions (same as before)
     function toggleAnimation(animationName) {
         const state = animationStates[animationName];
         if (!state || !state.action || !state.clip) {
