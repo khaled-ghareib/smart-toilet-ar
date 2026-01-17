@@ -2,11 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Icon Smart Toilet</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <!-- Essential AR meta tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-ar-content-mode" content="object">
+    <meta name="supported-device-families" content="iphone, ipad">
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { margin: 0; overflow: hidden; font-family: -apple-system, sans-serif; background: #000; color: white; height: 100vh; }
@@ -44,21 +50,99 @@
         .title-bar { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 12px 24px; border-radius: 12px; text-align: center; z-index: 50; max-width: 90%; display: none; }
         .title-bar h1 { font-size: 18px; font-weight: 600; color: white; margin: 0; }
         
+        #arInstructions { 
+            display: none; 
+            position: fixed; 
+            top: 0; left: 0; 
+            width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.95); 
+            color: white; 
+            z-index: 1000; 
+            padding: 30px; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            text-align: center; 
+            backdrop-filter: blur(10px);
+        }
+        
+        .instructions-content { 
+            background: rgba(30,30,30,0.9); 
+            padding: 30px; 
+            border-radius: 20px; 
+            max-width: 500px; 
+            width: 90%; 
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+        
+        .instructions-content h2 { margin-bottom: 20px; color: #20c997; }
+        .instructions-content ol { text-align: left; margin: 20px 0; padding-left: 20px; }
+        .instructions-content li { margin-bottom: 10px; line-height: 1.5; }
+        .instructions-content code { background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+        
         @media (max-width: 768px) {
             .controls { bottom: 20px; padding: 12px; }
             button { font-size: 12px; padding: 12px 8px; min-height: 45px; }
             #arButton, .title-bar { top: 10px; padding: 10px 20px; }
             .title-bar h1 { font-size: 16px; }
             #arButton { right: 10px; font-size: 14px; }
+            .instructions-content { padding: 20px; }
         }
     </style>
 </head>
 <body>
 
-<!-- Hidden AR link that gets triggered -->
-<a id="hiddenARLink" href="toilet_final.usdz" rel="ar" style="display: none;"></a>
+<!-- AR Instructions Modal -->
+<div id="arInstructions">
+    <div class="instructions-content">
+        <h2>View in AR</h2>
+        <div style="margin-bottom: 25px;">
+            <div style="background: #0056cc; padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+                <p><strong>For iPhone/iPad (Recommended):</strong></p>
+            </div>
+            <ol>
+                <li><strong>File Check:</strong> Make sure <code>toilet_final.usdz</code> is in the same folder as this webpage</li>
+                <li><strong>Open in Safari:</strong> This only works in Safari browser on iOS</li>
+                <li><strong>Tap AR Button:</strong> The AR button at the top right</li>
+                <li><strong>Allow Camera:</strong> Grant camera permissions when prompted</li>
+            </ol>
+        </div>
+        
+        <div style="background: #444; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+            <p><strong>⚠️ If AR doesn't work:</strong></p>
+            <p style="font-size: 14px; margin-top: 10px;">
+                1. Download the USDZ file separately<br>
+                2. Open it in Files app on iOS<br>
+                3. Tap "Share" → "AR Quick Look"
+            </p>
+        </div>
+        
+        <div style="display: flex; gap: 15px; margin-top: 20px;">
+            <button onclick="closeInstructions()" style="
+                flex: 1;
+                background: #444;
+                color: white;
+                border: 1px solid #666;
+                padding: 12px;
+                border-radius: 10px;
+                cursor: pointer;
+            ">Close</button>
+            <button onclick="testAR()" style="
+                flex: 1;
+                background: linear-gradient(135deg, #28a745, #20c997);
+                color: white;
+                border: none;
+                padding: 12px;
+                border-radius: 10px;
+                cursor: pointer;
+                font-weight: bold;
+            ">Try AR Again</button>
+        </div>
+    </div>
+</div>
 
-<button id="arButton">AR 👁️</button>
+<button id="arButton">👁️ View in AR</button>
 
 <div class="title-bar">
     <h1>Icon Smart Toilet</h1>
@@ -99,6 +183,10 @@
         'AirventAction': { isOpen: false, action: null, clip: null }
     };
     
+    // AR Support Detection
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    
     function init() {
         // Create scene
         scene = new THREE.Scene();
@@ -134,8 +222,15 @@
         // Load the 3D model
         loadModel();
         
-        // Show AR button
-        document.getElementById('arButton').style.display = 'block';
+        // Show AR button if on compatible device
+        if (isIOS) {
+            document.getElementById('arButton').style.display = 'block';
+        } else {
+            // Show AR button for all, but with different text
+            document.getElementById('arButton').style.display = 'block';
+            document.getElementById('arButton').textContent = '👁️ AR (iPhone Only)';
+            document.getElementById('arButton').style.background = 'linear-gradient(135deg, #666, #444)';
+        }
         
         // Start animation loop
         animate();
@@ -211,36 +306,85 @@
                 console.error('❌ Error loading model:', error);
                 document.getElementById('loading').innerHTML = `
                     <div style="color: #ff6b6b; margin-bottom: 15px;">⚠️ Error loading model</div>
-                    <p style="font-size: 12px;">Make sure toilet_final.glb is in the same folder</p>
+                    <p style="font-size: 12px; margin-bottom: 10px;">Make sure toilet_final.glb is in the same folder</p>
+                    <p style="font-size: 10px; color: #aaa;">Error: ${error.message || 'Unknown error'}</p>
                 `;
             }
         );
     }
     
-    // SIMPLE AR BUTTON - Just opens Quick Look if USDZ exists
+    // Improved AR Button Handler
     document.getElementById('arButton').addEventListener('click', function() {
-        const arLink = document.getElementById('hiddenARLink');
-        
-        // Try to open the AR link directly
-        try {
-            arLink.click();
-            
-            // If nothing happens after 1 second, show message
-            setTimeout(() => {
-                // Check if we're on iOS
-                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-                
-                if (isIOS) {
-                    alert('To use AR on iPhone:\n\n1. Make sure you have toilet_final.usdz file\n2. Place it in the same folder as this HTML\n3. Open in Safari (not Chrome)\n4. Try the AR button again');
-                } else {
-                    alert('For AR on iPhone:\n\n• Create toilet_final.usdz file\n• Place in same folder\n• Open in Safari browser');
-                }
-            }, 1000);
-        } catch (error) {
-            console.error('Error opening AR:', error);
-            alert('AR failed to open. Make sure you have toilet_final.usdz in the same folder.');
+        if (isIOS && isSafari) {
+            // iOS Safari - try AR Quick Look
+            launchARQuickLook();
+        } else {
+            // Show instructions
+            showInstructions();
         }
     });
+    
+    function launchARQuickLook() {
+        console.log('Attempting to launch AR Quick Look...');
+        
+        // Method 1: Create a temporary AR link
+        const arLink = document.createElement('a');
+        arLink.href = 'toilet_final.usdz';
+        arLink.setAttribute('rel', 'ar');
+        
+        // Add required AR attributes
+        arLink.innerHTML = `
+            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiMwMDU2Y2MiLz4KICA8dGV4dCB4PSI1MCIgeT0iNTAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiPkFSIFZpZXc8L3RleHQ+Cjwvc3ZnPg==" 
+                 style="width:100px;height:100px;border-radius:10px;" 
+                 alt="AR Preview">
+        `;
+        
+        // Add to body and trigger click
+        document.body.appendChild(arLink);
+        arLink.click();
+        
+        // Clean up
+        setTimeout(() => {
+            if (document.body.contains(arLink)) {
+                document.body.removeChild(arLink);
+            }
+        }, 100);
+        
+        // Fallback after 2 seconds
+        setTimeout(() => {
+            const anyARActive = document.querySelector('[rel="ar"]:active') || 
+                               document.querySelector('[rel="ar"]:focus');
+            if (!anyARActive) {
+                console.log('AR launch may have failed, showing instructions');
+                showInstructions();
+            }
+        }, 2000);
+    }
+    
+    function showInstructions() {
+        document.getElementById('arInstructions').style.display = 'flex';
+    }
+    
+    function closeInstructions() {
+        document.getElementById('arInstructions').style.display = 'none';
+    }
+    
+    function testAR() {
+        closeInstructions();
+        
+        // Create a test link to check if USDZ exists
+        fetch('toilet_final.usdz')
+            .then(response => {
+                if (response.ok) {
+                    launchARQuickLook();
+                } else {
+                    alert('USDZ file not found. Please ensure toilet_final.usdz is in the same folder as this webpage.');
+                }
+            })
+            .catch(() => {
+                alert('Cannot find toilet_final.usdz file. This is required for AR.\n\nPlease ensure the file exists in the same folder.');
+            });
+    }
     
     // Animation control
     function toggleAnimation(animationName) {
