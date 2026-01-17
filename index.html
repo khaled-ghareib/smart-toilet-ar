@@ -3,28 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Icon Smart Toilet - AR Optimized</title>
+    <title>Icon Smart Toilet - AR Fixed</title>
     
     <!-- Essential AR Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="supported-device-families" content="iphone, ipad">
     <meta name="apple-ar-content-mode" content="object">
-    
-    <!-- AR Quick Look specific meta tags -->
-    <meta property="og:image" content="ar-preview.jpg">
-    <meta property="og:title" content="Icon Smart Toilet">
-    <meta property="og:description" content="View in AR">
-    
-    <!-- Apple specific AR tags -->
-    <meta name="apple-ar-is-low-poly" content="false">
-    <meta name="apple-ar-scaling-enabled" content="true">
-    <meta name="apple-ar-canvas-enabled" content="true">
-    <meta name="apple-ar-modes" content="object">
-    
-    <!-- Preload AR assets -->
-    <link rel="preload" href="toilet_final.usdz" as="fetch" crossorigin="anonymous">
-    <link rel="preload" href="toilet_final.glb" as="fetch" crossorigin="anonymous">
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
@@ -210,6 +195,89 @@
             border-top-color: #0a192f;
         }
         
+        /* AR Modal */
+        .ar-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 2000;
+            padding: 20px;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .ar-modal-content {
+            background: #1a1a1a;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .ar-modal h2 {
+            color: #0a192f;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .ar-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .ar-step {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+        }
+        
+        .ar-step-number {
+            background: #0a192f;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .ar-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .ar-btn {
+            flex: 1;
+            padding: 15px;
+            border-radius: 10px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .ar-btn.primary {
+            background: linear-gradient(135deg, #0a192f, #1a365d);
+            color: white;
+        }
+        
+        .ar-btn.secondary {
+            background: #666;
+            color: white;
+        }
+        
         /* Media Queries */
         @media (max-width: 768px) {
             #controls {
@@ -245,8 +313,43 @@
 <!-- AR Loading -->
 <div id="arLoading">
     <div class="spinner"></div>
-    <div style="margin-top: 20px; font-size: 16px;">Preparing AR Experience...</div>
-    <div style="margin-top: 10px; font-size: 14px; color: #888;">This may take a moment</div>
+    <div style="margin-top: 20px; font-size: 16px;">Opening AR...</div>
+</div>
+
+<!-- AR Modal -->
+<div class="ar-modal" id="arModal">
+    <div class="ar-modal-content">
+        <h2>AR Quick Look</h2>
+        <div class="ar-steps">
+            <div class="ar-step">
+                <div class="ar-step-number">1</div>
+                <div>Make sure you're using <strong>Safari</strong> on iPhone/iPad</div>
+            </div>
+            <div class="ar-step">
+                <div class="ar-step-number">2</div>
+                <div>Allow camera access when prompted</div>
+            </div>
+            <div class="ar-step">
+                <div class="ar-step-number">3</div>
+                <div>Point your camera at a flat surface</div>
+            </div>
+        </div>
+        
+        <div style="background: rgba(10, 25, 47, 0.2); padding: 15px; border-radius: 10px; margin: 20px 0;">
+            <strong>Troubleshooting:</strong>
+            <p style="margin-top: 8px; font-size: 14px; color: #ccc;">
+                If AR doesn't open automatically, tap below:
+            </p>
+            <button id="manualARButton" style="width: 100%; margin-top: 10px; padding: 12px; background: #0a192f; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                📱 Tap to Open AR
+            </button>
+        </div>
+        
+        <div class="ar-buttons">
+            <button class="ar-btn secondary" onclick="closeARModal()">Cancel</button>
+            <button class="ar-btn primary" onclick="launchARNow()">Open AR</button>
+        </div>
+    </div>
 </div>
 
 <!-- Top Bar -->
@@ -293,9 +396,6 @@
         BidetAction: { active: false, action: null, isAnimating: false },
         AirventAction: { active: false, action: null, isAnimating: false }
     };
-    
-    // USDZ file size info (for optimization)
-    let usdzFileSize = 0;
     
     // Initialize the scene
     function init() {
@@ -346,9 +446,6 @@
         
         // Handle resize
         window.addEventListener('resize', onWindowResize);
-        
-        // Check AR file size and cache
-        preloadARAssets();
     }
     
     function loadModel() {
@@ -414,7 +511,7 @@
             },
             function(xhr) {
                 const percent = Math.round((xhr.loaded / xhr.total) * 100);
-                document.getElementById('loadingText').textContent = `Loading 3D: ${percent}%`;
+                document.getElementById('loadingText').textContent = `Loading: ${percent}%`;
             },
             function(error) {
                 console.error('❌ Error loading model:', error);
@@ -442,28 +539,6 @@
         );
     }
     
-    function preloadARAssets() {
-        // Get USDZ file size and pre-cache
-        fetch('toilet_final.usdz', { method: 'HEAD' })
-            .then(response => {
-                if (response.ok) {
-                    usdzFileSize = parseInt(response.headers.get('content-length') || '0');
-                    console.log(`USDZ file size: ${(usdzFileSize / (1024 * 1024)).toFixed(2)} MB`);
-                    
-                    // Pre-cache the file for faster loading
-                    if (usdzFileSize < 10 * 1024 * 1024) { // Only pre-cache if < 10MB
-                        const preloadLink = document.createElement('link');
-                        preloadLink.rel = 'preload';
-                        preloadLink.href = 'toilet_final.usdz';
-                        preloadLink.as = 'fetch';
-                        preloadLink.crossOrigin = 'anonymous';
-                        document.head.appendChild(preloadLink);
-                    }
-                }
-            })
-            .catch(console.warn);
-    }
-    
     function setupUI() {
         // Animation button handlers
         document.querySelectorAll('.control-btn[data-animation]').forEach(btn => {
@@ -476,8 +551,15 @@
         // Reset button
         document.getElementById('btnReset').addEventListener('click', resetAllAnimations);
         
-        // AR button - Direct AR launch (no modal)
-        document.getElementById('arButton').addEventListener('click', launchARNow);
+        // AR button - Show modal first
+        document.getElementById('arButton').addEventListener('click', function() {
+            openARModal();
+        });
+        
+        // Manual AR button in modal
+        document.getElementById('manualARButton').addEventListener('click', function() {
+            launchARNow();
+        });
     }
     
     function toggleAnimation(animName) {
@@ -624,24 +706,16 @@
                     if (response.ok) {
                         document.getElementById('arButton').style.display = 'flex';
                         console.log('✅ USDZ file found - AR ready');
-                        
-                        // Show file size warning if too large
-                        const fileSize = parseInt(response.headers.get('content-length') || '0');
-                        if (fileSize > 20 * 1024 * 1024) { // > 20MB
-                            console.warn(`⚠️ USDZ file is large: ${(fileSize / (1024 * 1024)).toFixed(2)}MB - AR may load slowly`);
-                        }
                     } else {
                         document.getElementById('arButton').style.display = 'flex';
                         document.getElementById('arButton').innerHTML = '<span>⚠️</span><span>AR File Missing</span>';
                         document.getElementById('arButton').style.background = 'linear-gradient(135deg, #f44336, #d32f2f)';
-                        console.warn('❌ USDZ file not found');
                     }
                 })
                 .catch(() => {
                     document.getElementById('arButton').style.display = 'flex';
                     document.getElementById('arButton').innerHTML = '<span>⚠️</span><span>AR File Missing</span>';
                     document.getElementById('arButton').style.background = 'linear-gradient(135deg, #f44336, #d32f2f)';
-                    console.warn('❌ Error checking USDZ file');
                 });
         } else if (isIOS) {
             // iOS but not Safari
@@ -655,102 +729,64 @@
         }
     }
     
+    function openARModal() {
+        document.getElementById('arModal').style.display = 'flex';
+    }
+    
+    function closeARModal() {
+        document.getElementById('arModal').style.display = 'none';
+    }
+    
     function launchARNow() {
         console.log('Launching AR Quick Look...');
         
-        // Show loading indicator
+        // Show loading
         document.getElementById('arLoading').style.display = 'flex';
+        closeARModal();
         
-        // Create a direct link to the USDZ file
-        const arAnchor = document.createElement('a');
-        arAnchor.href = 'toilet_final.usdz';
+        // Create a simple, direct AR link (THIS IS THE KEY FIX)
+        const arLink = document.createElement('a');
+        arLink.href = 'toilet_final.usdz';
         
-        // Add AR attributes for iOS Safari
-        arAnchor.setAttribute('rel', 'ar');
-        arAnchor.setAttribute('download', 'toilet_final.usdz');
+        // Add AR attributes for iOS
+        arLink.setAttribute('rel', 'ar');
         
-        // Create a tiny placeholder image (required by iOS)
+        // Create a small, invisible image for the AR badge
         const img = document.createElement('img');
-        img.src = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"></svg>');
+        img.src = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#0a192f"/><text x="50" y="55" font-family="Arial" font-size="20" fill="white" text-anchor="middle">AR</text></svg>');
         img.alt = 'AR';
-        img.width = 1;
-        img.height = 1;
-        img.style.position = 'absolute';
-        img.style.opacity = '0';
+        img.width = 100;
+        img.height = 100;
+        img.style.cssText = 'border-radius: 10px;';
         
-        arAnchor.appendChild(img);
-        document.body.appendChild(arAnchor);
+        arLink.appendChild(img);
+        document.body.appendChild(arLink);
         
-        // Pre-load the file first to cache it
-        fetch('toilet_final.usdz', { cache: 'force-cache' })
-            .then(response => response.blob())
-            .then(blob => {
-                console.log('USDZ file loaded into cache, launching AR...');
-                
-                // Create object URL for faster access
-                const objectUrl = URL.createObjectURL(blob);
-                arAnchor.href = objectUrl;
-                
-                // Trigger click after a short delay
-                setTimeout(() => {
-                    const clickEvent = new MouseEvent('click', {
-                        view: window,
-                        bubbles: true,
-                        cancelable: true
-                    });
-                    
-                    arAnchor.dispatchEvent(clickEvent);
-                    
-                    // Hide loading indicator
-                    document.getElementById('arLoading').style.display = 'none';
-                    
-                    // Clean up
-                    setTimeout(() => {
-                        URL.revokeObjectURL(objectUrl);
-                        if (arAnchor.parentNode) {
-                            arAnchor.parentNode.removeChild(arAnchor);
-                        }
-                    }, 1000);
-                    
-                }, 300); // Small delay to ensure iOS is ready
-            })
-            .catch(error => {
-                console.error('Error preloading USDZ:', error);
-                
-                // Fallback: try direct launch without preloading
-                setTimeout(() => {
-                    const clickEvent = new MouseEvent('click', {
-                        view: window,
-                        bubbles: true,
-                        cancelable: true
-                    });
-                    
-                    arAnchor.dispatchEvent(clickEvent);
-                    document.getElementById('arLoading').style.display = 'none';
-                    
-                    // Clean up
-                    setTimeout(() => {
-                        if (arAnchor.parentNode) {
-                            arAnchor.parentNode.removeChild(arAnchor);
-                        }
-                    }, 1000);
-                }, 300);
-            });
-        
-        // Fallback timeout in case AR doesn't launch
+        // Use setTimeout to ensure DOM is ready
         setTimeout(() => {
-            document.getElementById('arLoading').style.display = 'none';
+            // Trigger a real click
+            arLink.click();
             
-            // Check if we're still on the page
-            if (document.visibilityState === 'visible') {
-                console.log('AR may have failed to launch or was canceled');
+            // Hide loading after a moment
+            setTimeout(() => {
+                document.getElementById('arLoading').style.display = 'none';
                 
-                // Show a simple message (optional)
-                if (usdzFileSize > 50 * 1024 * 1024) { // > 50MB
-                    alert('AR model is large (' + (usdzFileSize / (1024 * 1024)).toFixed(1) + 'MB). It may take longer to load. Please wait or try again.');
+                // Remove the link after use
+                if (arLink.parentNode) {
+                    arLink.parentNode.removeChild(arLink);
                 }
-            }
-        }, 5000); // 5 second timeout
+                
+                // If we're still here after 3 seconds, show help
+                setTimeout(() => {
+                    if (document.visibilityState === 'visible') {
+                        console.log('AR may have failed to launch');
+                        // Optionally show a message
+                        alert('AR Quick Look did not open. Make sure:\n\n1. You are using Safari on iPhone/iPad\n2. The file "toilet_final.usdz" exists\n3. Try tapping "Tap to Open AR" in the instructions');
+                    }
+                }, 3000);
+                
+            }, 1000); // Wait 1 second before hiding loading
+        }, 100);
     }
     
     function onWindowResize() {
