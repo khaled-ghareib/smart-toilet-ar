@@ -158,11 +158,11 @@
             background: #4CAF50;
         }
         
-        /* AR Button */
+        /* AR Button - UPDATED TO DARK NAVY BLUE */
         #arButton {
-            background: linear-gradient(135deg, #FF9800, #F57C00);
+            background: linear-gradient(135deg, #0a192f, #1a365d);
             color: white;
-            border: none;
+            border: 2px solid rgba(255, 255, 255, 0.2);
             padding: 12px 24px;
             border-radius: 25px;
             font-weight: bold;
@@ -171,16 +171,19 @@
             display: none;
             align-items: center;
             gap: 8px;
-            box-shadow: 0 4px 15px rgba(255,152,0,0.3);
-            transition: transform 0.2s ease;
+            box-shadow: 0 4px 15px rgba(10, 25, 47, 0.4);
+            transition: all 0.2s ease;
         }
         
         #arButton:hover {
             transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(10, 25, 47, 0.6);
+            border-color: rgba(255, 255, 255, 0.3);
         }
         
         #arButton:active {
             transform: translateY(0);
+            box-shadow: 0 2px 10px rgba(10, 25, 47, 0.3);
         }
         
         /* AR Modal */
@@ -208,7 +211,7 @@
         }
         
         .ar-modal h2 {
-            color: #FF9800;
+            color: #4CAF50;
             margin-bottom: 20px;
             text-align: center;
         }
@@ -230,7 +233,7 @@
         }
         
         .ar-step-number {
-            background: #FF9800;
+            background: #4CAF50;
             color: white;
             width: 30px;
             height: 30px;
@@ -257,7 +260,7 @@
         }
         
         .ar-btn.primary {
-            background: #4CAF50;
+            background: linear-gradient(135deg, #0a192f, #1a365d);
             color: white;
         }
         
@@ -274,7 +277,7 @@
             bottom: -200px;
             left: 50%;
             transform: translateX(-50%);
-            background: #FF9800;
+            background: linear-gradient(135deg, #0a192f, #1a365d);
             border-radius: 10px;
             display: flex;
             align-items: center;
@@ -374,7 +377,7 @@
             </div>
         </div>
         
-        <div style="background: rgba(255,152,0,0.1); padding: 15px; border-radius: 10px; margin: 20px 0;">
+        <div style="background: rgba(10, 25, 47, 0.2); padding: 15px; border-radius: 10px; margin: 20px 0;">
             <strong>⚠️ If AR doesn't work:</strong>
             <p style="margin-top: 8px; font-size: 14px; color: #ccc;">
                 1. Save the USDZ file to your device<br>
@@ -400,11 +403,15 @@
     
     // Animation states
     const animations = {
-        CoverAction: { active: false, action: null },
-        SeatAction: { active: false, action: null },
-        BidetAction: { active: false, action: null },
-        AirventAction: { active: false, action: null }
+        CoverAction: { active: false, action: null, isAnimating: false },
+        SeatAction: { active: false, action: null, isAnimating: false },
+        BidetAction: { active: false, action: null, isAnimating: false },
+        AirventAction: { active: false, action: null, isAnimating: false }
     };
+    
+    // Animation queue for coordinated animations
+    let animationQueue = [];
+    let isProcessingQueue = false;
     
     // Initialize the scene
     function init() {
@@ -566,33 +573,56 @@
     
     function toggleAnimation(animName) {
         const anim = animations[animName];
-        if (!anim || !anim.action) return;
+        if (!anim || !anim.action || anim.isAnimating) return;
         
         anim.active = !anim.active;
         const targetTime = anim.active ? anim.action.getClip().duration : 0;
         
-        // Animate to target time
-        animateToTime(anim.action, targetTime, 0.5);
+        // If closing cover and seat is open, close seat first
+        if (animName === 'CoverAction' && !anim.active && animations.SeatAction.active) {
+            closeSeatBeforeCover(targetTime);
+            return;
+        }
+        
+        // Normal animation
+        animateToTime(anim.action, targetTime, 0.5, () => {
+            anim.isAnimating = false;
+        });
+        anim.isAnimating = true;
         
         // Update button state
-        const btn = document.querySelector(`[data-animation="${animName}"]`);
-        if (btn) {
-            btn.classList.toggle('on', anim.active);
-            btn.classList.toggle('off', !anim.active);
-        }
-        
-        // If closing cover, also close seat
-        if (animName === 'CoverAction' && !anim.active) {
-            const seatAnim = animations.SeatAction;
-            if (seatAnim && seatAnim.active) {
-                setTimeout(() => {
-                    toggleAnimation('SeatAction');
-                }, 300);
-            }
-        }
+        updateButtonState(animName, anim.active);
     }
     
-    function animateToTime(action, targetTime, duration) {
+    function closeSeatBeforeCover(coverTargetTime) {
+        const seatAnim = animations.SeatAction;
+        const coverAnim = animations.CoverAction;
+        
+        if (!seatAnim.action || !coverAnim.action) return;
+        
+        // Set both to animating
+        seatAnim.isAnimating = true;
+        coverAnim.isAnimating = true;
+        
+        // Close seat first (to time 0)
+        animateToTime(seatAnim.action, 0, 0.4, () => {
+            // Seat animation complete, update its state
+            seatAnim.active = false;
+            seatAnim.isAnimating = false;
+            updateButtonState('SeatAction', false);
+            
+            // Now close cover
+            setTimeout(() => {
+                animateToTime(coverAnim.action, coverTargetTime, 0.4, () => {
+                    coverAnim.active = false;
+                    coverAnim.isAnimating = false;
+                    updateButtonState('CoverAction', false);
+                });
+            }, 100); // Small delay between animations
+        });
+    }
+    
+    function animateToTime(action, targetTime, duration, onComplete = null) {
         const startTime = action.time;
         const start = Date.now();
         
@@ -612,6 +642,7 @@
             } else {
                 action.time = targetTime;
                 action.paused = true;
+                if (onComplete) onComplete();
             }
         }
         
@@ -619,19 +650,49 @@
         update();
     }
     
+    function updateButtonState(animName, isActive) {
+        const btn = document.querySelector(`[data-animation="${animName}"]`);
+        if (btn) {
+            btn.classList.toggle('on', isActive);
+            btn.classList.toggle('off', !isActive);
+        }
+    }
+    
     function resetAllAnimations() {
-        Object.keys(animations).forEach(animName => {
-            const anim = animations[animName];
-            if (anim && anim.action) {
-                anim.active = false;
-                animateToTime(anim.action, 0, 0.3);
-                
-                const btn = document.querySelector(`[data-animation="${animName}"]`);
-                if (btn) {
-                    btn.classList.remove('on');
-                    btn.classList.add('off');
-                }
+        // Create animation sequence: close seat first if open, then cover
+        let animationsToReset = [];
+        
+        // Check if seat is open
+        if (animations.SeatAction.active && !animations.SeatAction.isAnimating) {
+            animationsToReset.push('SeatAction');
+        }
+        
+        // Check if cover is open
+        if (animations.CoverAction.active && !animations.CoverAction.isAnimating) {
+            animationsToReset.push('CoverAction');
+        }
+        
+        // Add other animations
+        ['BidetAction', 'AirventAction'].forEach(animName => {
+            if (animations[animName].active && !animations[animName].isAnimating) {
+                animationsToReset.push(animName);
             }
+        });
+        
+        // Reset each animation
+        animationsToReset.forEach((animName, index) => {
+            setTimeout(() => {
+                const anim = animations[animName];
+                if (anim && anim.action) {
+                    anim.active = false;
+                    animateToTime(anim.action, 0, 0.3, () => {
+                        anim.isAnimating = false;
+                    });
+                    anim.isAnimating = true;
+                    
+                    updateButtonState(animName, false);
+                }
+            }, index * 150); // Stagger the animations
         });
         
         // Visual feedback for reset button
@@ -676,7 +737,7 @@
     function showNoARFile() {
         document.getElementById('arButton').style.display = 'flex';
         document.getElementById('arButton').innerHTML = '<span>🔧</span><span>Setup AR</span>';
-        document.getElementById('arButton').style.background = 'linear-gradient(135deg, #ff9800, #f57c00)';
+        document.getElementById('arButton').style.background = 'linear-gradient(135deg, #0a192f, #1a365d)';
         
         document.getElementById('arButton').onclick = function() {
             showARSetupInstructions();
@@ -703,7 +764,7 @@
         
         // Add image for AR badge (required by iOS)
         const img = document.createElement('img');
-        img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiNGRjk4MDAiLz48dGV4dCB4PSI1MCIgeT0iNTAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiPkFSPC90ZXh0Pjwvc3ZnPg==';
+        img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiMwYTE5MmYiLz48dGV4dCB4PSI1MCIgeT0iNTAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiPkFSPC90ZXh0Pjwvc3ZnPg==';
         img.alt = 'AR Preview';
         img.width = 100;
         img.height = 100;
@@ -770,7 +831,7 @@
                 <div style="margin: 20px 0;">
                     <p>The file <code>toilet_final.usdz</code> is required for AR.</p>
                     
-                    <div style="background: rgba(255,152,0,0.1); padding: 15px; border-radius: 10px; margin-top: 15px;">
+                    <div style="background: rgba(10, 25, 47, 0.2); padding: 15px; border-radius: 10px; margin-top: 15px;">
                         <strong>To create the USDZ file:</strong>
                         <ol style="margin: 10px 0 10px 20px;">
                             <li>Use Apple's Reality Converter app</li>
@@ -781,8 +842,8 @@
                         
                         <p style="margin-top: 10px; font-size: 14px;">
                             <strong>Alternative:</strong> You can also use online converters like:
-                            <br>• <a href="https://www.vectary.com/glb-to-usdz-converter/" target="_blank" style="color: #FF9800;">Vectary Converter</a>
-                            <br>• <a href="https://products.aspose.app/3d/conversion/glb-to-usdz" target="_blank" style="color: #FF9800;">Aspose Converter</a>
+                            <br>• <a href="https://www.vectary.com/glb-to-usdz-converter/" target="_blank" style="color: #4CAF50;">Vectary Converter</a>
+                            <br>• <a href="https://products.aspose.app/3d/conversion/glb-to-usdz" target="_blank" style="color: #4CAF50;">Aspose Converter</a>
                         </p>
                     </div>
                 </div>
