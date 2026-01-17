@@ -11,6 +11,12 @@
     <meta name="supported-device-families" content="iphone, ipad">
     <meta name="apple-ar-content-mode" content="object">
     
+    <!-- AR Quick Look specific meta tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta property="og:image" content="ar-preview.jpg">
+    <meta property="og:title" content="Icon Smart Toilet - AR">
+    <meta property="og:description" content="View in AR with Apple Quick Look">
+    
     <!-- Preload AR assets -->
     <link rel="preload" href="toilet_final.glb" as="fetch">
     <link rel="preload" href="toilet_final.usdz" as="fetch">
@@ -260,6 +266,31 @@
             color: white;
         }
         
+        /* AR Preview Badge */
+        #arPreviewBadge {
+            width: 100px;
+            height: 100px;
+            position: fixed;
+            bottom: -200px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #FF9800;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 10000;
+        }
+        
+        #arPreviewBadge.show {
+            bottom: 20px;
+            opacity: 1;
+        }
+        
         /* Media Queries */
         @media (max-width: 768px) {
             #controls {
@@ -358,6 +389,9 @@
         </div>
     </div>
 </div>
+
+<!-- Hidden AR Link Container -->
+<div id="arContainer" style="display: none;"></div>
 
 <script>
     // Scene variables
@@ -619,18 +653,23 @@
                 .then(response => {
                     if (response.ok) {
                         document.getElementById('arButton').style.display = 'flex';
+                        console.log('✅ USDZ file found - AR ready');
                     } else {
                         showNoARFile();
+                        console.warn('❌ USDZ file not found');
                     }
                 })
                 .catch(() => {
                     showNoARFile();
+                    console.warn('❌ Error checking USDZ file');
                 });
         } else if (isIOS) {
             // iOS but not Safari
             document.getElementById('arButton').style.display = 'flex';
             document.getElementById('arButton').innerHTML = '<span>⚠️</span><span>Use Safari for AR</span>';
             document.getElementById('arButton').style.background = 'linear-gradient(135deg, #f44336, #d32f2f)';
+        } else {
+            console.log('AR not supported on this device');
         }
     }
     
@@ -655,45 +694,72 @@
     function launchARNow() {
         closeARModal();
         
-        // DIRECT AR LAUNCH - Most reliable method
-        const arLink = document.createElement('a');
+        console.log('Launching AR Quick Look...');
         
-        // Use a data URL to force AR Quick Look
-        arLink.href = 'toilet_final.usdz';
-        arLink.setAttribute('rel', 'ar');
+        // Create the AR Quick Look anchor element
+        const arAnchor = document.createElement('a');
+        arAnchor.href = 'toilet_final.usdz';
+        arAnchor.setAttribute('rel', 'ar');
         
-        // Create a hidden image for AR preview
+        // Add image for AR badge (required by iOS)
         const img = document.createElement('img');
-        img.src = 'data:image/svg+xml;base64,' + btoa(`
-            <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="100" height="100" fill="#FF9800"/>
-                <text x="50" y="50" font-family="Arial" font-size="14" fill="white" text-anchor="middle" dominant-baseline="middle">AR</text>
-            </svg>
-        `);
+        img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiNGRjk4MDAiLz48dGV4dCB4PSI1MCIgeT0iNTAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiPkFSPC90ZXh0Pjwvc3ZnPg==';
         img.alt = 'AR Preview';
-        img.style.cssText = 'width:100px;height:100px;border-radius:10px;';
+        img.width = 100;
+        img.height = 100;
+        img.style.cssText = 'border-radius: 10px;';
         
-        arLink.appendChild(img);
-        document.body.appendChild(arLink);
+        arAnchor.appendChild(img);
         
-        // Simulate a click on the AR link
+        // Add to container and trigger click
+        const container = document.getElementById('arContainer');
+        container.innerHTML = '';
+        container.appendChild(arAnchor);
+        
+        // Trigger the click
         setTimeout(() => {
-            arLink.click();
+            arAnchor.click();
+            console.log('AR Quick Look triggered');
             
-            // Clean up
+            // Show AR badge feedback
+            showARBadge();
+            
+            // Fallback - if AR didn't launch after 2 seconds
             setTimeout(() => {
-                if (arLink.parentNode) {
-                    arLink.parentNode.removeChild(arLink);
+                // Check if we're still on the page (AR might have failed)
+                if (document.visibilityState === 'visible') {
+                    console.log('AR may have failed to launch');
+                    // Optional: show a message to the user
                 }
-            }, 100);
+            }, 2000);
+            
+            // Clean up after a delay
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 3000);
+        }, 100);
+    }
+    
+    function showARBadge() {
+        // Create AR badge animation
+        const badge = document.createElement('div');
+        badge.id = 'arPreviewBadge';
+        badge.innerHTML = '<span style="font-size: 18px;">👁️ Opening AR...</span>';
+        document.body.appendChild(badge);
+        
+        // Animate in
+        setTimeout(() => {
+            badge.classList.add('show');
         }, 100);
         
-        // Fallback check
+        // Remove after 3 seconds
         setTimeout(() => {
-            // If still on page after 3 seconds, AR failed
-            if (document.getElementById('arModal').style.display === 'none') {
-                alert('AR failed to launch. Please make sure:\n\n1. You are using Safari on iPhone/iPad\n2. The file "toilet_final.usdz" exists\n3. You allow camera access');
-            }
+            badge.classList.remove('show');
+            setTimeout(() => {
+                if (badge.parentNode) {
+                    badge.parentNode.removeChild(badge);
+                }
+            }, 300);
         }, 3000);
     }
     
@@ -712,6 +778,12 @@
                             <li>Export as USDZ</li>
                             <li>Place in same folder as this HTML file</li>
                         </ol>
+                        
+                        <p style="margin-top: 10px; font-size: 14px;">
+                            <strong>Alternative:</strong> You can also use online converters like:
+                            <br>• <a href="https://www.vectary.com/glb-to-usdz-converter/" target="_blank" style="color: #FF9800;">Vectary Converter</a>
+                            <br>• <a href="https://products.aspose.app/3d/conversion/glb-to-usdz" target="_blank" style="color: #FF9800;">Aspose Converter</a>
+                        </p>
                     </div>
                 </div>
                 
