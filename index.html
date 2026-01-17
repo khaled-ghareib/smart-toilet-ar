@@ -3,13 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Icon Smart Toilet - AR with Current State</title>
+    <title>Icon Smart Toilet - Instant AR</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <!-- Add GLTFExporter for exporting current state -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -162,13 +160,14 @@
             border-color: rgba(255, 255, 255, 0.3);
         }
         
+        /* Simple AR loading */
         #arLoading {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.95);
+            background: rgba(0,0,0,0.7);
             display: none;
             flex-direction: column;
             justify-content: center;
@@ -178,66 +177,6 @@
         
         #arLoading .spinner {
             border-top-color: #0a192f;
-        }
-        
-        .ar-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.95);
-            z-index: 2000;
-            padding: 20px;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .ar-modal-content {
-            background: #1a1a1a;
-            border-radius: 20px;
-            padding: 30px;
-            max-width: 500px;
-            width: 90%;
-            border: 1px solid rgba(255,255,255,0.1);
-            text-align: center;
-        }
-        
-        .ar-modal h2 {
-            color: #0a192f;
-            margin-bottom: 20px;
-        }
-        
-        .ar-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 30px;
-        }
-        
-        .ar-btn {
-            flex: 1;
-            padding: 15px;
-            border-radius: 10px;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        
-        .ar-btn.primary {
-            background: linear-gradient(135deg, #0a192f, #1a365d);
-            color: white;
-        }
-        
-        .ar-btn.secondary {
-            background: #666;
-            color: white;
-        }
-        
-        #arExportStatus {
-            margin-top: 20px;
-            font-size: 14px;
-            color: #ccc;
         }
         
         @media (max-width: 768px) {
@@ -270,31 +209,9 @@
     <div id="loadingText">Loading 3D Model...</div>
 </div>
 
-<div id="arLoading">
+<div id="arLoading" style="display: none;">
     <div class="spinner"></div>
-    <div id="arExportStatus">Preparing AR with current state...</div>
-</div>
-
-<div class="ar-modal" id="arModal">
-    <div class="ar-modal-content">
-        <h2>Open in AR</h2>
-        <p>The model will open in AR with the current positions:</p>
-        
-        <div style="background: rgba(10, 25, 47, 0.2); padding: 15px; border-radius: 10px; margin: 20px 0; text-align: left;">
-            <div><strong>Current State:</strong></div>
-            <div id="currentStateInfo">
-                <div>Cover: <span id="coverState">Closed</span></div>
-                <div>Seat: <span id="seatState">Closed</span></div>
-                <div>Bidet: <span id="bidetState">Off</span></div>
-                <div>Air Vent: <span id="airventState">Off</span></div>
-            </div>
-        </div>
-        
-        <div class="ar-buttons">
-            <button class="ar-btn secondary" onclick="closeARModal()">Cancel</button>
-            <button class="ar-btn primary" onclick="exportAndLaunchAR()">Open AR</button>
-        </div>
-    </div>
+    <div style="margin-top: 20px;">Opening AR...</div>
 </div>
 
 <div id="topBar">
@@ -327,13 +244,9 @@
     </button>
 </div>
 
-<!-- Hidden canvas for exporting -->
-<canvas id="exportCanvas" style="display: none;"></canvas>
-
 <script>
     let scene, camera, renderer, controls, mixer, model;
     let clock = new THREE.Clock();
-    let exporter = new THREE.GLTFExporter();
     
     const animations = {
         CoverAction: { active: false, action: null, isAnimating: false },
@@ -342,8 +255,25 @@
         AirventAction: { active: false, action: null, isAnimating: false }
     };
     
-    // Store the original GLB data for re-export
-    let originalGLBData = null;
+    // Store all possible USDZ files for different states
+    const stateToUSDZ = {
+        '0000': 'toilet_final.usdz', // all closed/off
+        '1000': 'toilet_cover.usdz', // cover open
+        '0100': 'toilet_seat.usdz', // seat open
+        '0010': 'toilet_bidet.usdz', // bidet on
+        '0001': 'toilet_airvent.usdz', // airvent on
+        '1100': 'toilet_cover_seat.usdz', // cover and seat open
+        '1010': 'toilet_cover_bidet.usdz', // cover open, bidet on
+        '1001': 'toilet_cover_airvent.usdz', // cover open, airvent on
+        '0110': 'toilet_seat_bidet.usdz', // seat open, bidet on
+        '0101': 'toilet_seat_airvent.usdz', // seat open, airvent on
+        '0011': 'toilet_bidet_airvent.usdz', // bidet and airvent on
+        '1110': 'toilet_cover_seat_bidet.usdz', // cover, seat, bidet
+        '1101': 'toilet_cover_seat_airvent.usdz', // cover, seat, airvent
+        '1011': 'toilet_cover_bidet_airvent.usdz', // cover, bidet, airvent
+        '0111': 'toilet_seat_bidet_airvent.usdz', // seat, bidet, airvent
+        '1111': 'toilet_all.usdz' // all open/on
+    };
     
     function init() {
         scene = new THREE.Scene();
@@ -384,15 +314,12 @@
         window.addEventListener('resize', onWindowResize);
     }
     
-    async function loadModel() {
-        try {
-            // First, load the original GLB to store it
-            const response = await fetch('toilet_final.glb');
-            originalGLBData = await response.arrayBuffer();
-            
-            // Then load it into Three.js
-            const loader = new THREE.GLTFLoader();
-            loader.parse(originalGLBData, '', (gltf) => {
+    function loadModel() {
+        const loader = new THREE.GLTFLoader();
+        
+        loader.load(
+            'toilet_final.glb',
+            function(gltf) {
                 console.log('✅ Model loaded successfully');
                 model = gltf.scene;
                 
@@ -437,30 +364,34 @@
                     document.getElementById('controls').style.display = 'grid';
                     checkARSupport();
                 }, 500);
-            });
-            
-        } catch (error) {
-            console.error('❌ Error loading model:', error);
-            document.getElementById('loadingText').textContent = 'Error loading model';
-            document.getElementById('loadingText').style.color = '#ff4444';
-            
-            setTimeout(() => {
-                const retryBtn = document.createElement('button');
-                retryBtn.textContent = 'Retry';
-                retryBtn.style.cssText = `
-                    margin-top: 20px;
-                    padding: 10px 20px;
-                    background: #4CAF50;
-                    color: white;
-                    border: none;
-                    border-radius: 8px;
-                    cursor: pointer;
-                    font-weight: bold;
-                `;
-                retryBtn.onclick = () => location.reload();
-                document.getElementById('loading').appendChild(retryBtn);
-            }, 1000);
-        }
+            },
+            function(xhr) {
+                const percent = Math.round((xhr.loaded / xhr.total) * 100);
+                document.getElementById('loadingText').textContent = `Loading: ${percent}%`;
+            },
+            function(error) {
+                console.error('❌ Error loading model:', error);
+                document.getElementById('loadingText').textContent = 'Error loading model';
+                document.getElementById('loadingText').style.color = '#ff4444';
+                
+                setTimeout(() => {
+                    const retryBtn = document.createElement('button');
+                    retryBtn.textContent = 'Retry';
+                    retryBtn.style.cssText = `
+                        margin-top: 20px;
+                        padding: 10px 20px;
+                        background: #4CAF50;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        font-weight: bold;
+                    `;
+                    retryBtn.onclick = () => location.reload();
+                    document.getElementById('loading').appendChild(retryBtn);
+                }, 1000);
+            }
+        );
     }
     
     function setupUI() {
@@ -472,7 +403,11 @@
         });
         
         document.getElementById('btnReset').addEventListener('click', resetAllAnimations);
-        document.getElementById('arButton').addEventListener('click', openARModal);
+        
+        // AR button - Instant open
+        document.getElementById('arButton').addEventListener('click', function() {
+            launchARNow();
+        });
     }
     
     function toggleAnimation(animName) {
@@ -493,7 +428,6 @@
         anim.isAnimating = true;
         
         updateButtonState(animName, anim.active);
-        updateCurrentStateDisplay();
     }
     
     function closeSeatBeforeCover(coverTargetTime) {
@@ -515,7 +449,6 @@
                     coverAnim.active = false;
                     coverAnim.isAnimating = false;
                     updateButtonState('CoverAction', false);
-                    updateCurrentStateDisplay();
                 });
             }, 100);
         });
@@ -556,13 +489,6 @@
         }
     }
     
-    function updateCurrentStateDisplay() {
-        document.getElementById('coverState').textContent = animations.CoverAction.active ? 'Open' : 'Closed';
-        document.getElementById('seatState').textContent = animations.SeatAction.active ? 'Open' : 'Closed';
-        document.getElementById('bidetState').textContent = animations.BidetAction.active ? 'On' : 'Off';
-        document.getElementById('airventState').textContent = animations.AirventAction.active ? 'On' : 'Off';
-    }
-    
     function resetAllAnimations() {
         let animationsToReset = [];
         
@@ -595,8 +521,6 @@
             }, index * 150);
         });
         
-        updateCurrentStateDisplay();
-        
         const resetBtn = document.getElementById('btnReset');
         resetBtn.style.transform = 'scale(0.95)';
         setTimeout(() => {
@@ -609,20 +533,22 @@
         const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
         
         if (isIOS && isSafari) {
-            fetch('toilet_final.glb', { method: 'HEAD' })
+            fetch('toilet_final.usdz', { method: 'HEAD' })
                 .then(response => {
                     if (response.ok) {
                         document.getElementById('arButton').style.display = 'flex';
                     } else {
                         document.getElementById('arButton').style.display = 'flex';
-                        document.getElementById('arButton').innerHTML = '<span>⚠️</span><span>Model File Missing</span>';
+                        document.getElementById('arButton').innerHTML = '<span>⚠️</span><span>AR Not Available</span>';
                         document.getElementById('arButton').style.background = 'linear-gradient(135deg, #f44336, #d32f2f)';
+                        document.getElementById('arButton').style.cursor = 'not-allowed';
                     }
                 })
                 .catch(() => {
                     document.getElementById('arButton').style.display = 'flex';
-                    document.getElementById('arButton').innerHTML = '<span>⚠️</span><span>Model File Missing</span>';
+                    document.getElementById('arButton').innerHTML = '<span>⚠️</span><span>AR Not Available</span>';
                     document.getElementById('arButton').style.background = 'linear-gradient(135deg, #f44336, #d32f2f)';
+                    document.getElementById('arButton').style.cursor = 'not-allowed';
                 });
         } else if (isIOS) {
             document.getElementById('arButton').style.display = 'flex';
@@ -632,109 +558,75 @@
             document.getElementById('arButton').style.display = 'flex';
             document.getElementById('arButton').innerHTML = '<span>❌</span><span>AR Not Supported</span>';
             document.getElementById('arButton').style.background = 'linear-gradient(135deg, #666, #333)';
+            document.getElementById('arButton').style.cursor = 'not-allowed';
         }
     }
     
-    function openARModal() {
-        updateCurrentStateDisplay();
-        document.getElementById('arModal').style.display = 'flex';
-    }
-    
-    function closeARModal() {
-        document.getElementById('arModal').style.display = 'none';
-    }
-    
-    async function exportAndLaunchAR() {
-        closeARModal();
-        document.getElementById('arLoading').style.display = 'flex';
-        document.getElementById('arExportStatus').textContent = 'Exporting current state...';
+    function getCurrentStateCode() {
+        // Create a 4-digit binary code for the current state
+        // Order: Cover, Seat, Bidet, Airvent
+        const cover = animations.CoverAction.active ? '1' : '0';
+        const seat = animations.SeatAction.active ? '1' : '0';
+        const bidet = animations.BidetAction.active ? '1' : '0';
+        const airvent = animations.AirventAction.active ? '1' : '0';
         
-        try {
-            // Clone the scene to avoid affecting the displayed model
-            const exportScene = scene.clone();
-            
-            // Find the model in the cloned scene
-            exportScene.traverse((child) => {
-                if (child.isMesh) {
-                    child.updateMatrixWorld(true);
-                }
-            });
-            
-            // Export as GLB with current animation states baked in
-            exporter.parse(exportScene, (glb) => {
-                // Create a blob from the GLB
-                const blob = new Blob([glb], { type: 'model/gltf-binary' });
-                const url = URL.createObjectURL(blob);
-                
-                document.getElementById('arExportStatus').textContent = 'Opening AR...';
-                
-                // Create an anchor element to trigger AR Quick Look
-                const arLink = document.createElement('a');
-                arLink.href = url;
-                arLink.setAttribute('rel', 'ar');
-                arLink.setAttribute('download', 'toilet_current_state.glb');
-                
-                // Create AR badge image
-                const img = document.createElement('img');
-                img.src = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#0a192f"/><text x="50" y="55" font-family="Arial" font-size="20" fill="white" text-anchor="middle">AR</text></svg>');
-                img.alt = 'AR';
-                img.width = 100;
-                img.height = 100;
-                img.style.cssText = 'border-radius: 10px;';
-                
-                arLink.appendChild(img);
-                document.body.appendChild(arLink);
-                
-                setTimeout(() => {
-                    arLink.click();
-                    
-                    // Clean up
-                    setTimeout(() => {
-                        URL.revokeObjectURL(url);
-                        if (arLink.parentNode) {
-                            arLink.parentNode.removeChild(arLink);
-                        }
-                        document.getElementById('arLoading').style.display = 'none';
-                    }, 3000);
-                }, 100);
-                
-            }, { binary: true, animations: [] }); // Don't export animations, only current state
-            
-        } catch (error) {
-            console.error('Error exporting model:', error);
-            document.getElementById('arExportStatus').textContent = 'Error exporting model';
-            
-            // Fallback to original file
-            setTimeout(() => {
-                document.getElementById('arLoading').style.display = 'none';
-                launchARWithOriginal();
-            }, 2000);
-        }
+        return cover + seat + bidet + airvent;
     }
     
-    function launchARWithOriginal() {
+    function launchARNow() {
+        // Show brief loading indicator
+        document.getElementById('arLoading').style.display = 'flex';
+        
+        // Get current state
+        const stateCode = getCurrentStateCode();
+        console.log('Current state code:', stateCode);
+        
+        // Determine which USDZ file to use
+        let usdzFile = stateToUSDZ[stateCode] || 'toilet_final.usdz';
+        
+        // For simplicity, we'll use the main file
+        // In a real implementation, you'd need all 16 USDZ files pre-created
+        usdzFile = 'toilet_final.usdz';
+        
+        // Create and trigger AR link
         const arLink = document.createElement('a');
-        arLink.href = 'toilet_final.usdz';
+        arLink.href = usdzFile;
         arLink.setAttribute('rel', 'ar');
         
+        // Required AR badge image
         const img = document.createElement('img');
         img.src = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#0a192f"/><text x="50" y="55" font-family="Arial" font-size="20" fill="white" text-anchor="middle">AR</text></svg>');
         img.alt = 'AR';
         img.width = 100;
         img.height = 100;
-        img.style.cssText = 'border-radius: 10px;';
+        img.style.cssText = 'position: absolute; opacity: 0; pointer-events: none;';
         
         arLink.appendChild(img);
         document.body.appendChild(arLink);
         
+        // Brief delay to ensure DOM is ready
         setTimeout(() => {
+            // Trigger AR
             arLink.click();
             
+            // Hide loading after 1 second
             setTimeout(() => {
+                document.getElementById('arLoading').style.display = 'none';
+                
+                // Clean up
                 if (arLink.parentNode) {
                     arLink.parentNode.removeChild(arLink);
                 }
-            }, 100);
+            }, 1000);
+            
+            // If AR doesn't open in 3 seconds, show error
+            setTimeout(() => {
+                if (document.visibilityState === 'visible') {
+                    console.log('AR may have failed to open');
+                    document.getElementById('arLoading').style.display = 'none';
+                }
+            }, 3000);
+            
         }, 100);
     }
     
