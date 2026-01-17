@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Icon Smart Toilet</title>
+    <title>Icon Smart Toilet - Model Repair</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -44,8 +44,8 @@
         .title-bar { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 12px 24px; border-radius: 12px; text-align: center; z-index: 50; max-width: 90%; display: none; }
         .title-bar h1 { font-size: 18px; font-weight: 600; color: white; margin: 0; }
         
-        /* USDZ Fix Instructions */
-        #usdzFixModal {
+        /* Model Repair Tool */
+        #modelRepairTool {
             display: none;
             position: fixed;
             top: 0;
@@ -59,42 +59,33 @@
             justify-content: center;
         }
         
-        .usdz-fix-content {
+        .repair-tool {
             background: #1a1a1a;
             padding: 30px;
             border-radius: 20px;
-            max-width: 600px;
+            max-width: 500px;
             width: 90%;
-            border: 2px solid #007bff;
+            border: 2px solid #ff6b35;
         }
         
-        .usdz-fix-content h2 {
-            color: #007bff;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        
-        .export-step {
-            background: rgba(0,123,255,0.1);
+        .repair-option {
+            background: rgba(255,107,53,0.1);
             padding: 15px;
             border-radius: 10px;
-            margin: 10px 0;
-            border-left: 4px solid #007bff;
+            margin: 15px 0;
+            cursor: pointer;
+            border: 1px solid rgba(255,107,53,0.3);
+            transition: all 0.3s ease;
         }
         
-        .export-step h3 {
-            color: #20c997;
-            margin-bottom: 10px;
+        .repair-option:hover {
+            background: rgba(255,107,53,0.2);
+            transform: translateY(-2px);
         }
         
-        .code-block {
-            background: #000;
-            padding: 15px;
-            border-radius: 8px;
-            font-family: monospace;
-            font-size: 12px;
-            margin: 10px 0;
-            overflow-x: auto;
+        .repair-option h3 {
+            color: #ff8e53;
+            margin-bottom: 5px;
         }
         
         @media (max-width: 768px) {
@@ -108,89 +99,48 @@
 </head>
 <body>
 
-<!-- USDZ Fix Instructions Modal -->
-<div id="usdzFixModal">
-    <div class="usdz-fix-content">
-        <h2>🚨 USDZ Export Fix Required</h2>
-        <p style="margin-bottom: 20px; color: #ccc;">Your model appears separated in AR because of incorrect USDZ export settings.</p>
+<!-- Model Repair Tool -->
+<div id="modelRepairTool">
+    <div class="repair-tool">
+        <h2 style="color: #ff6b35; text-align: center; margin-bottom: 20px;">🛠️ Model Repair Required</h2>
+        <p style="text-align: center; margin-bottom: 30px; color: #ccc;">Your 3D model has structural issues. Choose a repair method:</p>
         
-        <div class="export-step">
-            <h3>🛠️ EXACT USDZ Export Settings:</h3>
-            
-            <div class="code-block">
-<b>FOR BLENDER:</b>
-1. Select ALL objects (A)
-2. Object → Parent → Object (keep transforms)
-3. File → Export → USD (Hydra)
-4. SETTINGS:
-   ✓ Selection Only
-   ✓ Visible Objects
-   ✓ Export Materials
-   ✓ Export Textures
-   ✓ Export UVs
-   ✓ Export Normals
-   ✓ Apply Modifiers
-   ✓ Generate Preview Surface
-   ✓ Use Instancing
-5. Scale: 1.0
-6. Up Axis: Y-Up
-            </div>
+        <div class="repair-option" onclick="repairModel('group')">
+            <h3>🔗 Option 1: Auto-Group Parts</h3>
+            <p style="color: #aaa; font-size: 14px;">Attempts to group all separate pieces together</p>
         </div>
         
-        <div class="export-step">
-            <h3>🔧 Alternative: Reality Converter (Apple):</h3>
-            <div class="code-block">
-<b>STEPS:</b>
-1. Open toilet_final.glb in Reality Converter
-2. Select ALL objects
-3. File → Consolidate Assets
-4. File → Update Materials (VERY IMPORTANT!)
-5. File → Export → USDZ
-6. CHECK: "Preserve Hierarchy"
-            </div>
+        <div class="repair-option" onclick="repairModel('simple')">
+            <h3>🔄 Option 2: Create Simple Model</h3>
+            <p style="color: #aaa; font-size: 14px;">Creates a basic working toilet model</p>
         </div>
         
-        <div class="export-step">
-            <h3>✅ Quick Fix Command Line:</h3>
-            <div class="code-block">
-# On macOS with Xcode installed:
-xcrun usdzconverter toilet_final.glb toilet_fixed.usdz \
-    -v \
-    -f usdz \
-    -l \
-    -m auto \
-    -g \
-    -checker
-            </div>
+        <div class="repair-option" onclick="showModelFixInstructions()">
+            <h3>📁 Option 3: Fix Original File</h3>
+            <p style="color: #aaa; font-size: 14px;">Instructions to fix your GLB file</p>
         </div>
         
-        <div style="margin-top: 30px; text-align: center;">
-            <button onclick="closeUSDZFixModal()" style="
+        <div style="text-align: center; margin-top: 30px;">
+            <button onclick="closeRepairTool()" style="
                 background: #444;
                 color: white;
                 border: none;
-                padding: 15px 30px;
+                padding: 12px 24px;
                 border-radius: 10px;
                 cursor: pointer;
-                font-weight: bold;
-                margin: 0 10px;
-            ">Close</button>
+                margin: 0 5px;
+            ">Cancel</button>
             
-            <button onclick="testFixedUSDZ()" style="
-                background: linear-gradient(135deg, #28a745, #20c997);
+            <button onclick="skipRepair()" style="
+                background: #666;
                 color: white;
                 border: none;
-                padding: 15px 30px;
+                padding: 12px 24px;
                 border-radius: 10px;
                 cursor: pointer;
-                font-weight: bold;
-                margin: 0 10px;
-            ">Test Fixed USDZ</button>
+                margin: 0 5px;
+            ">Skip (Use Broken)</button>
         </div>
-        
-        <p style="margin-top: 25px; font-size: 12px; color: #888; text-align: center;">
-            💡 After fixing, replace "toilet_final.usdz" with the new fixed file.
-        </p>
     </div>
 </div>
 
@@ -202,7 +152,7 @@ xcrun usdzconverter toilet_final.glb toilet_fixed.usdz \
 
 <div id="loading">
     <div class="loading-spinner"></div>
-    <p id="loadingText">Loading Icon Smart Toilet...</p>
+    <p id="loadingText">Initializing...</p>
 </div>
 
 <div class="controls">
@@ -224,27 +174,21 @@ xcrun usdzconverter toilet_final.glb toilet_fixed.usdz \
 </div>
 
 <script>
-    // Scene setup
-    let scene, camera, renderer, controls, mixer, model;
+    // SIMPLE AND RELIABLE VERSION
+    console.log('Starting Icon Smart Toilet...');
     
-    // Animation states
-    const animationStates = {
-        'CoverAction': { isOpen: false, action: null, clip: null },
-        'SeatAction': { isOpen: false, action: null, clip: null },
-        'BidetAction': { isOpen: false, action: null, clip: null },
-        'AirventAction': { isOpen: false, action: null, clip: null }
-    };
+    // Basic variables
+    let scene, camera, renderer, controls;
+    let model = null;
+    let isLoading = true;
+    let loadAttempts = 0;
     
-    // Model parts for manual grouping
-    let modelParts = {
-        body: null,
-        cover: null,
-        seat: null,
-        bidet: null,
-        airvent: null
-    };
+    // Initialize immediately
+    init();
     
     function init() {
+        console.log('Initializing Three.js...');
+        
         // Create scene
         scene = new THREE.Scene();
         scene.background = new THREE.Color(0x1a1a1a);
@@ -254,12 +198,12 @@ xcrun usdzconverter toilet_final.glb toilet_fixed.usdz \
         camera.position.set(3, 2, 5);
         
         // Create renderer
-        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         document.body.appendChild(renderer.domElement);
         
-        // Add orbit controls
+        // Add controls
         controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.target.set(0, 0.5, 0);
@@ -272,514 +216,402 @@ xcrun usdzconverter toilet_final.glb toilet_fixed.usdz \
         mainLight.position.set(5, 8, 5);
         scene.add(mainLight);
         
-        const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
-        fillLight.position.set(-5, 3, -5);
-        scene.add(fillLight);
+        // Try to load model, with timeout
+        loadModelWithTimeout();
         
-        // Load the 3D model
-        loadModel();
-        
-        // Show AR button
+        // Show AR button immediately
         document.getElementById('arButton').style.display = 'block';
         
-        // Start animation loop
+        // Setup UI event listeners
+        setupUI();
+        
+        // Start render loop
         animate();
         
-        // Handle window resize
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-        
-        // Check AR support
-        checkARSupport();
+        // Handle resize
+        window.addEventListener('resize', onWindowResize);
     }
     
-    function loadModel() {
-        const loader = new THREE.GLTFLoader();
+    function loadModelWithTimeout() {
+        console.log('Attempting to load toilet_final.glb...');
+        document.getElementById('loadingText').textContent = 'Loading 3D model...';
         
-        console.log('Loading toilet_final.glb...');
+        // Set timeout for 8 seconds
+        const loadTimeout = setTimeout(() => {
+            if (isLoading) {
+                console.log('⚠️ Model load timeout - showing repair options');
+                showRepairTool();
+                isLoading = false;
+            }
+        }, 8000);
+        
+        // Try to load the model
+        const loader = new THREE.GLTFLoader();
         
         loader.load(
             'toilet_final.glb',
+            // Success
             (gltf) => {
-                console.log('✅ Model loaded successfully');
-                model = gltf.scene;
-                
-                // Check if model parts are separated
-                analyzeModelStructure(gltf.scene);
-                
-                // Group parts together if separated
-                if (arePartsSeparated()) {
-                    console.log('⚠️ Model parts appear separated, attempting to group...');
-                    groupModelParts();
-                }
-                
-                // Center the model
-                const box = new THREE.Box3().setFromObject(model);
-                const center = box.getCenter(new THREE.Vector3());
-                const size = box.getSize(new THREE.Vector3());
-                
-                // Position model
-                model.position.x = -center.x;
-                model.position.y = -center.y + (size.y / 2);
-                model.position.z = -center.z;
-                
-                scene.add(model);
-                
-                // Setup animations if available
-                if (gltf.animations && gltf.animations.length > 0) {
-                    console.log('✅ Animations found:', gltf.animations.map(a => a.name));
-                    
-                    mixer = new THREE.AnimationMixer(model);
-                    
-                    gltf.animations.forEach(clip => {
-                        const name = clip.name;
-                        if (animationStates[name]) {
-                            const action = mixer.clipAction(clip);
-                            action.clampWhenFinished = true;
-                            action.loop = THREE.LoopOnce;
-                            action.timeScale = 0;
-                            
-                            animationStates[name].action = action;
-                            animationStates[name].clip = clip;
-                            
-                            action.play();
-                            action.paused = true;
-                            action.time = 0;
-                        }
-                    });
-                } else {
-                    console.warn('⚠️ No animations found in model');
-                    setupManualAnimations();
-                }
-                
-                // Hide loading, show UI
-                document.getElementById('loading').style.display = 'none';
-                document.querySelector('.controls').style.display = 'grid';
-                document.querySelector('.title-bar').style.display = 'block';
-                
+                clearTimeout(loadTimeout);
+                console.log('✅ Model loaded!');
+                onModelLoaded(gltf);
             },
+            // Progress
             (xhr) => {
-                const percent = (xhr.loaded / xhr.total * 100).toFixed(2);
+                const percent = Math.round((xhr.loaded / xhr.total) * 100);
                 document.getElementById('loadingText').textContent = `Loading: ${percent}%`;
+                console.log(`Progress: ${percent}%`);
             },
+            // Error
             (error) => {
-                console.error('❌ Error loading model:', error);
-                document.getElementById('loading').innerHTML = `
-                    <div style="color: #ff6b6b; margin-bottom: 15px;">⚠️ Error loading model</div>
-                    <p style="font-size: 12px;">Make sure toilet_final.glb is in the same folder</p>
-                    <button onclick="location.reload()" style="
-                        background: #007bff;
-                        color: white;
-                        border: none;
-                        padding: 8px 16px;
-                        border-radius: 8px;
-                        cursor: pointer;
-                        margin-top: 10px;
-                    ">Retry</button>
-                `;
+                clearTimeout(loadTimeout);
+                console.error('❌ Load error:', error);
+                document.getElementById('loadingText').textContent = 'Error loading model';
+                document.getElementById('loadingText').style.color = '#ff4444';
+                
+                // Show repair options
+                setTimeout(() => {
+                    showRepairTool();
+                }, 1000);
             }
         );
     }
     
-    function analyzeModelStructure(scene) {
-        console.log('🔍 Analyzing model structure...');
+    function onModelLoaded(gltf) {
+        isLoading = false;
+        loadAttempts++;
         
-        let totalMeshes = 0;
-        let groups = [];
+        model = gltf.scene;
         
-        scene.traverse((child) => {
-            if (child.isMesh) {
-                totalMeshes++;
-                const bbox = new THREE.Box3().setFromObject(child);
-                
-                // Try to identify parts by name
-                const name = child.name.toLowerCase();
-                if (name.includes('cover') || name.includes('lid')) {
-                    modelParts.cover = child;
-                } else if (name.includes('seat')) {
-                    modelParts.seat = child;
-                } else if (name.includes('bidet') || name.includes('nozzle')) {
-                    modelParts.bidet = child;
-                } else if (name.includes('air') || name.includes('vent')) {
-                    modelParts.airvent = child;
-                } else if (name.includes('body') || name.includes('base') || name.includes('tank')) {
-                    modelParts.body = child;
-                }
-                
-                groups.push({
-                    name: child.name,
-                    position: child.position.clone(),
-                    bbox: bbox
-                });
-            }
-        });
-        
-        console.log(`Found ${totalMeshes} meshes`);
-        console.log('Identified parts:', modelParts);
-        console.log('All groups:', groups);
-    }
-    
-    function arePartsSeparated() {
-        // Check if we found multiple separate meshes
+        // Check if model is broken
         let meshCount = 0;
         model.traverse(child => {
             if (child.isMesh) meshCount++;
         });
         
-        // Also check distances between identified parts
-        if (modelParts.body && modelParts.seat) {
-            const bodyPos = modelParts.body.position;
-            const seatPos = modelParts.seat.position;
-            const distance = bodyPos.distanceTo(seatPos);
-            console.log(`Distance between body and seat: ${distance}`);
-            
-            if (distance > 0.5) {
-                return true;
-            }
-        }
+        console.log(`Model has ${meshCount} meshes`);
         
-        return meshCount > 1;
-    }
-    
-    function groupModelParts() {
-        console.log('🔄 Grouping model parts...');
-        
-        // Create a parent group
-        const toiletGroup = new THREE.Group();
-        toiletGroup.name = 'Toilet_Group';
-        
-        // Add all meshes to the group
-        model.traverse(child => {
-            if (child.isMesh) {
-                toiletGroup.add(child);
-            }
-        });
-        
-        // Replace the model with grouped version
-        scene.remove(model);
-        model = toiletGroup;
-        scene.add(model);
-        
-        console.log('✅ Parts grouped together');
-    }
-    
-    function setupManualAnimations() {
-        console.log('Setting up manual animations...');
-        
-        // Create simple rotation animations for parts
-        document.querySelectorAll('[data-animation]').forEach(btn => {
-            if (btn.id !== 'btn-Reset') {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const animationName = btn.getAttribute('data-animation');
-                    toggleManualAnimation(animationName);
-                });
-            }
-        });
-    }
-    
-    function toggleManualAnimation(animationName) {
-        const state = animationStates[animationName];
-        state.isOpen = !state.isOpen;
-        updateButton(animationName);
-        
-        // Find the part to animate
-        let part = null;
-        switch(animationName) {
-            case 'CoverAction': part = modelParts.cover; break;
-            case 'SeatAction': part = modelParts.seat; break;
-            case 'BidetAction': part = modelParts.bidet; break;
-            case 'AirventAction': part = modelParts.airvent; break;
-        }
-        
-        if (part) {
-            // Simple rotation animation
-            const targetRotation = state.isOpen ? Math.PI / 3 : 0; // 60 degrees
-            animateRotation(part, targetRotation, 0.5);
-        }
-    }
-    
-    function animateRotation(object, targetRotation, duration) {
-        if (!object) return;
-        
-        const startRotation = object.rotation.x || 0;
-        const startTime = Date.now();
-        
-        function update() {
-            const elapsed = Date.now() - startTime;
-            const progress = Math.min(elapsed / (duration * 1000), 1);
-            
-            // Easing function
-            const eased = progress < 0.5 
-                ? 2 * progress * progress 
-                : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-            
-            object.rotation.x = startRotation + (targetRotation - startRotation) * eased;
-            
-            if (progress < 1) {
-                requestAnimationFrame(update);
-            }
-        }
-        
-        update();
-    }
-    
-    function checkARSupport() {
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-        
-        if (isIOS && isSafari) {
-            // Check if USDZ exists
-            fetch('toilet_final.usdz', { method: 'HEAD' })
-                .then(response => {
-                    if (!response.ok) {
-                        document.getElementById('arButton').textContent = 'AR 🔧 (Setup Required)';
-                        document.getElementById('arButton').style.background = 'linear-gradient(135deg, #ff6b35, #ff8e53)';
-                    }
-                })
-                .catch(() => {
-                    document.getElementById('arButton').textContent = 'AR 🔧 (Setup Required)';
-                    document.getElementById('arButton').style.background = 'linear-gradient(135deg, #ff6b35, #ff8e53)';
-                });
-        } else if (isIOS) {
-            document.getElementById('arButton').textContent = 'AR ⚠️ (Use Safari)';
-            document.getElementById('arButton').style.background = 'linear-gradient(135deg, #ffc107, #ff9800)';
-        } else {
-            document.getElementById('arButton').textContent = 'AR 📱 (iPhone Only)';
-            document.getElementById('arButton').style.background = 'linear-gradient(135deg, #666, #444)';
-        }
-    }
-    
-    // AR Button with USDZ fix guidance
-    document.getElementById('arButton').addEventListener('click', function() {
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-        
-        if (isIOS && isSafari) {
-            // Try AR first
-            launchARQuickLook();
-            
-            // If AR fails, show fix modal after 2 seconds
-            setTimeout(() => {
-                // Check if we're still on the page
-                if (!document.hidden) {
-                    showUSDZFixModal();
-                }
-            }, 2000);
-        } else if (isIOS) {
-            alert('Please open this page in Safari browser for AR support.');
-        } else {
-            showUSDZFixModal();
-        }
-    });
-    
-    function launchARQuickLook() {
-        console.log('Launching AR Quick Look...');
-        
-        const arLink = document.createElement('a');
-        arLink.href = 'toilet_final.usdz';
-        arLink.setAttribute('rel', 'ar');
-        arLink.setAttribute('id', 'arLink');
-        
-        // Add preview image
-        const img = document.createElement('img');
-        img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiMyOGE3NDUiLz48dGV4dCB4PSI1MCIgeT0iNTAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiPkFSPC90ZXh0Pjwvc3ZnPg==';
-        img.alt = 'AR Preview';
-        img.style.cssText = 'width:100px;height:100px;border-radius:10px;';
-        
-        arLink.appendChild(img);
-        document.body.appendChild(arLink);
-        
-        // Trigger AR
-        setTimeout(() => {
-            arLink.click();
-            
-            // Clean up
-            setTimeout(() => {
-                if (arLink.parentNode) {
-                    arLink.parentNode.removeChild(arLink);
-                }
-            }, 100);
-        }, 100);
-    }
-    
-    function showUSDZFixModal() {
-        document.getElementById('usdzFixModal').style.display = 'flex';
-    }
-    
-    function closeUSDZFixModal() {
-        document.getElementById('usdzFixModal').style.display = 'none';
-    }
-    
-    function testFixedUSDZ() {
-        closeUSDZFixModal();
-        
-        // Try different USDZ file names
-        const testFiles = ['toilet_fixed.usdz', 'toilet_ar.usdz', 'toilet.usdz'];
-        
-        let tested = 0;
-        
-        testFiles.forEach(filename => {
-            fetch(filename, { method: 'HEAD' })
-                .then(response => {
-                    if (response.ok) {
-                        console.log(`Found ${filename}, testing AR...`);
-                        
-                        // Launch AR with this file
-                        const arLink = document.createElement('a');
-                        arLink.href = filename;
-                        arLink.setAttribute('rel', 'ar');
-                        
-                        const img = document.createElement('img');
-                        img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiMyOGE3NDUiLz48dGV4dCB4PSI1MCIgeT0iNTAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiPkFSPC90ZXh0Pjwvc3ZnPg==';
-                        img.alt = 'AR Preview';
-                        img.style.cssText = 'width:100px;height:100px;border-radius:10px;';
-                        
-                        arLink.appendChild(img);
-                        document.body.appendChild(arLink);
-                        
-                        setTimeout(() => {
-                            arLink.click();
-                            setTimeout(() => {
-                                if (arLink.parentNode) arLink.parentNode.removeChild(arLink);
-                            }, 100);
-                        }, 100);
-                    }
-                })
-                .catch(() => {
-                    tested++;
-                    if (tested === testFiles.length) {
-                        alert('No fixed USDZ files found. Please create one using the instructions above.');
-                    }
-                });
-        });
-    }
-    
-    // Animation control
-    function toggleAnimation(animationName) {
-        const state = animationStates[animationName];
-        if (!state || !state.action || !state.clip) {
-            console.warn(`Animation "${animationName}" not available`);
-            toggleManualAnimation(animationName);
+        if (meshCount === 0) {
+            console.log('⚠️ Model has no meshes - creating simple model');
+            createSimpleModel();
             return;
         }
         
-        state.isOpen = !state.isOpen;
-        updateButton(animationName);
+        // Position model
+        const box = new THREE.Box3().setFromObject(model);
+        const center = box.getCenter(new THREE.Vector3());
         
-        const targetTime = state.isOpen ? state.clip.duration : 0;
-        animateToState(state.action, targetTime, 0.5);
+        model.position.x = -center.x;
+        model.position.y = -center.y;
+        model.position.z = -center.z;
         
-        if (animationName === 'CoverAction' && !state.isOpen) {
-            const seatState = animationStates.SeatAction;
-            if (seatState && seatState.isOpen) {
-                setTimeout(() => {
-                    seatState.isOpen = false;
-                    updateButton('SeatAction');
-                    animateToState(seatState.action, 0, 0.5);
-                }, 300);
-            }
+        // Scale if needed
+        const size = box.getSize(new THREE.Vector3());
+        const maxSize = Math.max(size.x, size.y, size.z);
+        if (maxSize > 10) {
+            const scale = 3 / maxSize;
+            model.scale.setScalar(scale);
+        }
+        
+        scene.add(model);
+        
+        // Show UI
+        showUI();
+        
+        // Check if parts are separated
+        if (meshCount > 1) {
+            console.log('⚠️ Model has multiple separate pieces');
+            // Don't auto-repair, let user decide
         }
     }
     
-    function animateToState(action, targetTime, duration) {
-        const startTime = action.time;
-        const start = performance.now();
+    function createSimpleModel() {
+        console.log('Creating simple toilet model...');
         
-        function update() {
-            const elapsed = performance.now() - start;
-            const progress = Math.min(elapsed / (duration * 1000), 1);
-            
-            const easedProgress = progress < 0.5 
-                ? 2 * progress * progress 
-                : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-            
-            action.time = startTime + (targetTime - startTime) * easedProgress;
-            
-            if (progress < 1) {
-                requestAnimationFrame(update);
-            } else {
-                action.time = targetTime;
-                action.paused = true;
-            }
-        }
+        // Create a simple toilet as fallback
+        const group = new THREE.Group();
         
-        action.paused = false;
-        update();
+        // Base
+        const baseGeometry = new THREE.CylinderGeometry(0.4, 0.5, 0.4, 32);
+        const baseMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+        const base = new THREE.Mesh(baseGeometry, baseMaterial);
+        base.position.y = 0.2;
+        group.add(base);
+        
+        // Tank
+        const tankGeometry = new THREE.BoxGeometry(0.6, 0.8, 0.3);
+        const tankMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+        const tank = new THREE.Mesh(tankGeometry, tankMaterial);
+        tank.position.set(0, 0.8, 0.2);
+        group.add(tank);
+        
+        // Seat
+        const seatGeometry = new THREE.TorusGeometry(0.35, 0.05, 16, 100, Math.PI);
+        const seatMaterial = new THREE.MeshStandardMaterial({ color: 0xeeeeee });
+        const seat = new THREE.Mesh(seatGeometry, seatMaterial);
+        seat.rotation.x = Math.PI / 2;
+        seat.position.y = 0.42;
+        group.add(seat);
+        
+        // Cover
+        const coverGeometry = new THREE.TorusGeometry(0.34, 0.04, 16, 100, Math.PI);
+        const coverMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
+        const cover = new THREE.Mesh(coverGeometry, coverMaterial);
+        cover.rotation.x = Math.PI / 2;
+        cover.position.y = 0.47;
+        group.add(cover);
+        
+        model = group;
+        scene.add(model);
+        
+        // Position
+        model.position.y = 0.5;
+        
+        showUI();
     }
     
-    function updateButton(animationName) {
-        const state = animationStates[animationName];
-        const button = document.getElementById(`btn-${animationName}`);
-        if (!button) return;
+    function showUI() {
+        document.getElementById('loading').style.display = 'none';
+        document.querySelector('.title-bar').style.display = 'block';
+        document.querySelector('.controls').style.display = 'grid';
         
-        const indicator = button.querySelector('.status-indicator');
-        
-        if (state.isOpen) {
-            button.classList.add('on');
-            button.classList.remove('off');
-            if (indicator) indicator.style.background = '#44ff44';
-            button.innerHTML = `<span class="status-indicator"></span>${animationName.replace('Action', '')} On`;
-        } else {
-            button.classList.add('off');
-            button.classList.remove('on');
-            if (indicator) indicator.style.background = '#ff4444';
-            button.innerHTML = `<span class="status-indicator"></span>${animationName.replace('Action', '')}`;
+        console.log('UI shown successfully');
+    }
+    
+    function showRepairTool() {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('modelRepairTool').style.display = 'flex';
+    }
+    
+    function closeRepairTool() {
+        document.getElementById('modelRepairTool').style.display = 'none';
+        // Show UI anyway
+        showUI();
+    }
+    
+    function skipRepair() {
+        closeRepairTool();
+        // Create simple model if none exists
+        if (!model) {
+            createSimpleModel();
         }
     }
     
-    function resetAll() {
-        Object.keys(animationStates).forEach(name => {
-            const state = animationStates[name];
-            state.isOpen = false;
-            
-            if (state.action) {
-                animateToState(state.action, 0, 0.5);
+    function repairModel(method) {
+        console.log(`Repairing model using method: ${method}`);
+        
+        // Remove existing model
+        if (model) {
+            scene.remove(model);
+        }
+        
+        if (method === 'group') {
+            // Try to load and group
+            const loader = new THREE.GLTFLoader();
+            loader.load('toilet_final.glb', (gltf) => {
+                model = gltf.scene;
+                
+                // Group all meshes
+                const group = new THREE.Group();
+                model.traverse(child => {
+                    if (child.isMesh) {
+                        group.add(child.clone());
+                    }
+                });
+                
+                model = group;
+                scene.add(model);
+                positionModel();
+                closeRepairTool();
+                showUI();
+            });
+        } else if (method === 'simple') {
+            createSimpleModel();
+            closeRepairTool();
+        }
+    }
+    
+    function showModelFixInstructions() {
+        alert(`TO FIX YOUR GLB FILE:
+
+1. OPEN IN BLENDER:
+   - File → Import → glTF 2.0
+   - Select toilet_final.glb
+
+2. FIX MODEL STRUCTURE:
+   - Select ALL objects (A key)
+   - Press Ctrl+J to JOIN into one object
+   - OR: Select all → Object → Parent → Object
+
+3. EXPORT PROPERLY:
+   - File → Export → glTF 2.0
+   - Format: GLB (binary)
+   - ✓ Include: Cameras, Punctual Lights
+   - Transform: +Y Up
+   - ✓ Apply Modifiers
+   - ✓ Embed Textures
+
+4. SAVE AS toilet_fixed.glb
+5. Replace your current file`);
+        
+        // Offer to reload
+        if (confirm('Save these instructions and reload page?')) {
+            location.reload();
+        }
+    }
+    
+    function positionModel() {
+        if (!model) return;
+        
+        const box = new THREE.Box3().setFromObject(model);
+        const center = box.getCenter(new THREE.Vector3());
+        
+        model.position.x = -center.x;
+        model.position.y = -center.y + 0.5;
+        model.position.z = -center.z;
+    }
+    
+    function setupUI() {
+        // Control buttons
+        document.querySelectorAll('.controls button').forEach(btn => {
+            if (btn.id !== 'btn-Reset') {
+                btn.addEventListener('click', function() {
+                    this.classList.toggle('on');
+                    this.classList.toggle('off');
+                    
+                    // Update indicator
+                    const indicator = this.querySelector('.status-indicator');
+                    if (indicator) {
+                        indicator.style.background = this.classList.contains('on') ? '#44ff44' : '#ff4444';
+                    }
+                    
+                    // Simple animation if model exists
+                    if (model && this.id.includes('Cover')) {
+                        animatePart('cover', this.classList.contains('on'));
+                    }
+                    if (model && this.id.includes('Seat')) {
+                        animatePart('seat', this.classList.contains('on'));
+                    }
+                });
             }
-            
-            updateButton(name);
         });
         
-        const resetBtn = document.getElementById('btn-Reset');
-        resetBtn.style.background = '#28a745';
-        setTimeout(() => {
-            resetBtn.style.background = '';
-        }, 300);
+        // Reset button
+        document.getElementById('btn-Reset').addEventListener('click', function() {
+            document.querySelectorAll('.controls button').forEach(btn => {
+                if (btn.id !== 'btn-Reset') {
+                    btn.classList.remove('on');
+                    btn.classList.add('off');
+                    const indicator = btn.querySelector('.status-indicator');
+                    if (indicator) indicator.style.background = '#ff4444';
+                }
+            });
+            
+            // Visual feedback
+            this.style.background = '#28a745';
+            setTimeout(() => {
+                this.style.background = '';
+            }, 300);
+        });
+        
+        // AR button
+        document.getElementById('arButton').addEventListener('click', function() {
+            // Direct AR launch - simplest method
+            const arLink = document.createElement('a');
+            arLink.href = 'toilet_final.usdz';
+            arLink.setAttribute('rel', 'ar');
+            
+            const img = document.createElement('img');
+            img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiMyOGE3NDUiLz48dGV4dCB4PSI1MCIgeT0iNTAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiPkFSPC90ZXh0Pjwvc3ZnPg==';
+            img.alt = 'AR Preview';
+            img.style.cssText = 'width:100px;height:100px;border-radius:10px;';
+            
+            arLink.appendChild(img);
+            document.body.appendChild(arLink);
+            
+            setTimeout(() => {
+                arLink.click();
+                setTimeout(() => {
+                    if (arLink.parentNode) {
+                        arLink.parentNode.removeChild(arLink);
+                    }
+                }, 100);
+            }, 100);
+        });
     }
     
-    let clock = new THREE.Clock();
+    function animatePart(partName, isOpen) {
+        if (!model) return;
+        
+        // Simple rotation animation
+        let targetObject = null;
+        
+        model.traverse(child => {
+            if (child.isMesh) {
+                const name = child.name.toLowerCase();
+                if (partName === 'cover' && (name.includes('cover') || name.includes('lid'))) {
+                    targetObject = child;
+                }
+                if (partName === 'seat' && name.includes('seat')) {
+                    targetObject = child;
+                }
+            }
+        });
+        
+        if (targetObject) {
+            const targetRotation = isOpen ? Math.PI / 3 : 0; // 60 degrees
+            const startRotation = targetObject.rotation.x || 0;
+            const startTime = Date.now();
+            
+            function animate() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / 500, 1);
+                
+                // Easing
+                const eased = progress < 0.5 
+                    ? 2 * progress * progress 
+                    : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+                
+                targetObject.rotation.x = startRotation + (targetRotation - startRotation) * eased;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                }
+            }
+            
+            animate();
+        }
+    }
+    
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
     
     function animate() {
         requestAnimationFrame(animate);
-        
-        const delta = clock.getDelta();
-        
-        if (mixer) {
-            mixer.update(delta);
-        }
-        
         controls.update();
         renderer.render(scene, camera);
     }
     
-    // Initialize
-    window.addEventListener('DOMContentLoaded', () => {
-        document.querySelectorAll('[data-animation]').forEach(button => {
-            if (button.id !== 'btn-Reset') {
-                button.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const animationName = button.getAttribute('data-animation');
-                    toggleAnimation(animationName);
-                });
-            }
-        });
-        
-        document.getElementById('btn-Reset').addEventListener('click', resetAll);
-        init();
-    });
+    // Quick test function
+    function testModelFile() {
+        fetch('toilet_final.glb')
+            .then(response => {
+                if (response.ok) {
+                    alert('✅ GLB file exists and is accessible');
+                } else {
+                    alert('❌ GLB file not found or inaccessible');
+                }
+            })
+            .catch(error => {
+                alert('❌ Error: ' + error.message);
+            });
+    }
+    
+    // Run a quick test on load
+    setTimeout(testModelFile, 1000);
 </script>
 </body>
 </html>
