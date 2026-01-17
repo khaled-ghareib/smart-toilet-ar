@@ -26,52 +26,24 @@
         
         canvas { display: block; width: 100vw; height: 100vh; }
         
-        /* Remove AR button, add info button */
-        #infoButton { position: absolute; top: 20px; right: 20px; background: linear-gradient(135deg, #6c757d, #495057); color: white; padding: 12px 24px; border-radius: 25px; border: none; font-weight: bold; cursor: pointer; z-index: 100; display: none; }
+        /* AR button at top right */
+        #arButton { position: absolute; top: 20px; right: 20px; background: linear-gradient(135deg, #28a745, #20c997); color: white; padding: 12px 24px; border-radius: 25px; border: none; font-weight: bold; cursor: pointer; z-index: 100; display: none; }
         
         .title-bar { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 12px 24px; border-radius: 12px; text-align: center; z-index: 50; max-width: 90%; display: none; }
         .title-bar h1 { font-size: 18px; font-weight: 600; color: white; margin: 0; }
         
-        /* Info modal */
-        #infoModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; }
-        .modal-content { background: #1a1a1a; padding: 30px; border-radius: 20px; max-width: 90%; width: 500px; text-align: center; }
-        
         @media (max-width: 768px) {
             .controls { bottom: 20px; padding: 12px; }
             button { font-size: 12px; padding: 12px 8px; min-height: 45px; }
-            #infoButton, .title-bar { top: 10px; padding: 10px 20px; }
+            #arButton, .title-bar { top: 10px; padding: 10px 20px; }
             .title-bar h1 { font-size: 16px; }
-            #infoButton { right: 10px; font-size: 14px; }
+            #arButton { right: 10px; font-size: 14px; }
         }
     </style>
 </head>
 <body>
 
-<!-- Info Modal -->
-<div id="infoModal">
-    <div class="modal-content">
-        <h2>Icon Smart Toilet</h2>
-        <p style="margin: 15px 0; color: #007bff;">Interactive 3D Viewer</p>
-        
-        <div style="text-align: left; margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 10px;">
-            <p style="margin: 10px 0;"><strong>Controls:</strong></p>
-            <p style="margin: 5px 0; font-size: 14px; color: #aaa;">• <strong>Desktop:</strong> Left-click + drag to rotate, Scroll to zoom, Right-click + drag to pan</p>
-            <p style="margin: 5px 0; font-size: 14px; color: #aaa;">• <strong>Mobile:</strong> One finger to rotate, Two fingers to zoom, Three fingers to pan</p>
-            <p style="margin: 5px 0; font-size: 14px; color: #aaa;">• <strong>Buttons:</strong> Toggle animations (Cover closes seat automatically)</p>
-            
-            <p style="margin: 20px 0 10px 0;"><strong>Compatible with:</strong></p>
-            <p style="margin: 5px 0; font-size: 14px; color: #aaa;">• iPhone/iPad Safari</p>
-            <p style="margin: 5px 0; font-size: 14px; color: #aaa;">• Android Chrome</p>
-            <p style="margin: 5px 0; font-size: 14px; color: #aaa;">• Desktop Chrome/Firefox/Safari</p>
-        </div>
-        
-        <div style="display: flex; gap: 10px; margin-top: 20px; justify-content: center;">
-            <button onclick="closeInfoModal()" style="background: #007bff; padding: 10px 20px;">Got it!</button>
-        </div>
-    </div>
-</div>
-
-<button id="infoButton">ℹ️ Info</button>
+<button id="arButton">AR 👁️</button>
 
 <div class="title-bar">
     <h1>Icon Smart Toilet</h1>
@@ -106,7 +78,7 @@
     let isAnimating = false;
     let currentAnimation = null;
     
-    // Animation states - FIXED to prevent looping
+    // Animation states
     const animationStates = {
         'CoverAction': { isOpen: false, action: null, isPlaying: false },
         'SeatAction': { isOpen: false, action: null, isPlaying: false },
@@ -143,7 +115,6 @@
         mainLight.position.set(5, 8, 5);
         scene.add(mainLight);
         
-        // Add fill light
         const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
         fillLight.position.set(-5, 3, -5);
         scene.add(fillLight);
@@ -151,8 +122,8 @@
         // Load the 3D model
         loadModel();
         
-        // Show info button
-        document.getElementById('infoButton').style.display = 'block';
+        // Show AR button
+        document.getElementById('arButton').style.display = 'block';
         
         // Start animation loop
         animate();
@@ -181,8 +152,6 @@
                 const center = box.getCenter(new THREE.Vector3());
                 const size = box.getSize(new THREE.Vector3());
                 
-                console.log('Model size:', size);
-                
                 // Position model
                 model.position.x = -center.x;
                 model.position.y = -center.y + (size.y / 2);
@@ -201,9 +170,9 @@
                         if (animationStates[name]) {
                             // Create action and configure it properly
                             const action = mixer.clipAction(clip);
-                            action.clampWhenFinished = true; // Stop at end
-                            action.loop = THREE.LoopOnce; // Play once
-                            action.timeScale = 0; // Start stopped
+                            action.clampWhenFinished = true;
+                            action.loop = THREE.LoopOnce;
+                            action.timeScale = 0;
                             
                             animationStates[name].action = action;
                             animationStates[name].clip = clip;
@@ -212,8 +181,6 @@
                             action.play();
                             action.paused = true;
                             action.time = 0;
-                            
-                            console.log(`✅ Setup animation: ${name} (duration: ${clip.duration}s)`);
                         }
                     });
                 } else {
@@ -233,8 +200,6 @@
                 document.querySelector('.controls').style.display = 'grid';
                 document.querySelector('.title-bar').style.display = 'block';
                 
-                console.log('✅ Setup complete');
-                
             },
             (xhr) => {
                 // Loading progress
@@ -245,8 +210,7 @@
                 console.error('❌ Error loading model:', error);
                 document.getElementById('loading').innerHTML = `
                     <div style="color: #ff6b6b; margin-bottom: 15px;">⚠️ Error loading 3D model</div>
-                    <p style="font-size: 12px; margin-bottom: 10px;">File: toilet_final.glb</p>
-                    <p style="font-size: 12px;">Make sure the file is in the same folder as this HTML file</p>
+                    <p style="font-size: 12px;">Make sure toilet_final.glb is in the same folder</p>
                     <button onclick="location.reload()" style="margin-top: 15px; padding: 10px 20px; background: #007bff; border: none; border-radius: 8px; color: white; cursor: pointer;">
                         Retry
                     </button>
@@ -255,15 +219,24 @@
         );
     }
     
-    function showInfoModal() {
-        document.getElementById('infoModal').style.display = 'flex';
-    }
+    // AR Button Handler
+    document.getElementById('arButton').addEventListener('click', function() {
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const isAndroid = /Android/.test(navigator.userAgent);
+        
+        if (isIOS) {
+            // For iPhone
+            alert('For AR on iPhone:\n\n1. Make sure you have toilet_final.usdz file\n2. Place it in the same folder\n3. Refresh the page\n4. AR button will work\n\nFor now, enjoy the 3D viewer!');
+        } else if (isAndroid) {
+            // For Android
+            alert('For AR on Android:\n\n1. Use Chrome browser\n2. Make sure you\'re on HTTPS\n3. Grant camera permissions\n\nThis 3D viewer works perfectly too!');
+        } else {
+            // For desktop
+            alert('AR works best on mobile devices.\n\nOn iPhone: Need USDZ file\nOn Android: Use Chrome with WebXR\n\nTry it on your phone!');
+        }
+    });
     
-    function closeInfoModal() {
-        document.getElementById('infoModal').style.display = 'none';
-    }
-    
-    // FIXED: Proper animation control without looping
+    // Animation control
     function toggleAnimation(animationName) {
         const state = animationStates[animationName];
         if (!state || !state.action) {
@@ -271,27 +244,21 @@
             return;
         }
         
-        // If currently playing, don't do anything
         if (state.isPlaying) {
-            console.log('Animation already playing, waiting...');
+            console.log('Animation already playing');
             return;
         }
         
-        // Stop any currently playing animation
         stopAllAnimations();
         
-        // Toggle state
         state.isOpen = !state.isOpen;
         state.isPlaying = true;
         currentAnimation = animationName;
         
-        // Update button immediately
         updateButton(animationName);
-        
-        // Play animation
         playAnimation(animationName, state.isOpen);
         
-        // Special logic: if closing cover, also close seat
+        // If closing cover, also close seat
         if (animationName === 'CoverAction' && !state.isOpen) {
             const seatState = animationStates.SeatAction;
             if (seatState && seatState.isOpen) {
@@ -300,7 +267,7 @@
                     seatState.isPlaying = true;
                     updateButton('SeatAction');
                     playAnimation('SeatAction', false);
-                }, 300); // Slight delay
+                }, 300);
             }
         }
     }
@@ -312,41 +279,31 @@
         const clip = state.clip;
         const action = state.action;
         
-        // Configure action
-        action.reset(); // Reset to beginning
+        action.reset();
         action.clampWhenFinished = true;
         action.loop = THREE.LoopOnce;
         action.paused = false;
         
         if (playForward) {
-            // Play forward from start to end
             action.time = 0;
             action.timeScale = 1.0;
         } else {
-            // Play in reverse from end to start
             action.time = clip.duration;
             action.timeScale = -1.0;
         }
         
-        console.log(`▶️ Playing ${animationName} ${playForward ? 'forward' : 'backward'} (${clip.duration}s)`);
+        const duration = clip.duration * 1000;
         
-        // Calculate animation duration
-        const duration = clip.duration * 1000; // Convert to milliseconds
-        
-        // Set timeout to mark as finished
         setTimeout(() => {
             state.isPlaying = false;
             currentAnimation = null;
             
-            // Ensure it stays at the end/start position
             if (playForward) {
                 action.time = clip.duration;
             } else {
                 action.time = 0;
             }
             action.paused = true;
-            
-            console.log(`✅ Finished ${animationName}`);
         }, duration);
     }
     
@@ -382,18 +339,13 @@
     }
     
     function resetAll() {
-        console.log('🔄 Resetting all animations');
-        
-        // Stop all animations
         stopAllAnimations();
         
-        // Reset all states to closed
         Object.keys(animationStates).forEach(name => {
             const state = animationStates[name];
             state.isOpen = false;
             state.isPlaying = false;
             
-            // Reset animation to start
             if (state.action && state.clip) {
                 state.action.paused = true;
                 state.action.time = 0;
@@ -402,7 +354,6 @@
             updateButton(name);
         });
         
-        // Visual feedback
         const resetBtn = document.getElementById('btn-Reset');
         resetBtn.style.background = '#28a745';
         setTimeout(() => {
@@ -417,36 +368,28 @@
         
         const delta = clock.getDelta();
         
-        // Update mixer if it exists
         if (mixer) {
             mixer.update(delta);
         }
         
-        // Update controls
         controls.update();
-        
-        // Render scene
         renderer.render(scene, camera);
     }
     
     // Initialize when page loads
     window.addEventListener('DOMContentLoaded', () => {
-        console.log('🚀 Page loaded, initializing 3D viewer...');
-        
         // Setup button listeners
         document.querySelectorAll('[data-animation]').forEach(button => {
             if (button.id !== 'btn-Reset') {
                 button.addEventListener('click', (e) => {
                     e.preventDefault();
                     const animationName = button.getAttribute('data-animation');
-                    console.log(`🔄 Button clicked: ${animationName}`);
                     toggleAnimation(animationName);
                 });
             }
         });
         
         document.getElementById('btn-Reset').addEventListener('click', resetAll);
-        document.getElementById('infoButton').addEventListener('click', showInfoModal);
         
         // Initialize the app
         init();
