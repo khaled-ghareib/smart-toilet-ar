@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Icon Smart Toilet - AR with Current State</title>
+    <title>Icon Smart Toilet - Instant AR</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -210,8 +211,7 @@
 
 <div id="arLoading">
     <div class="spinner"></div>
-    <div style="margin-top: 20px;">Preparing AR with current state...</div>
-    <div id="arStatus" style="margin-top: 10px; font-size: 14px; color: #888;"></div>
+    <div id="arStatus" style="margin-top: 20px;">Preparing AR model...</div>
 </div>
 
 <div id="topBar">
@@ -247,6 +247,7 @@
 <script>
     let scene, camera, renderer, controls, mixer, model;
     let clock = new THREE.Clock();
+    let exporter = new THREE.GLTFExporter();
     
     const animations = {
         CoverAction: { active: false, action: null, isAnimating: false },
@@ -255,15 +256,8 @@
         AirventAction: { active: false, action: null, isAnimating: false }
     };
     
-    // Function to get current state as query parameters
-    function getCurrentStateParams() {
-        const cover = animations.CoverAction.active ? '1' : '0';
-        const seat = animations.SeatAction.active ? '1' : '0';
-        const bidet = animations.BidetAction.active ? '1' : '0';
-        const airvent = animations.AirventAction.active ? '1' : '0';
-        
-        return `cover=${cover}&seat=${seat}&bidet=${bidet}&airvent=${airvent}`;
-    }
+    // Store original model data
+    let originalModelData = null;
     
     function init() {
         scene = new THREE.Scene();
@@ -312,6 +306,7 @@
             function(gltf) {
                 console.log('✅ Model loaded successfully');
                 model = gltf.scene;
+                originalModelData = gltf;
                 
                 const box = new THREE.Box3().setFromObject(model);
                 const center = box.getCenter(new THREE.Vector3());
@@ -516,97 +511,73 @@
     
     function checkARSupport() {
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
         
-        if (isIOS && isSafari) {
+        if (isIOS) {
             document.getElementById('arButton').style.display = 'flex';
-        } else if (isIOS) {
-            document.getElementById('arButton').style.display = 'flex';
-            document.getElementById('arButton').innerHTML = '<span>⚠️</span><span>Use Safari for AR</span>';
-            document.getElementById('arButton').style.background = 'linear-gradient(135deg, #f44336, #d32f2f)';
         } else {
             document.getElementById('arButton').style.display = 'flex';
             document.getElementById('arButton').innerHTML = '<span>❌</span><span>AR Not Supported</span>';
             document.getElementById('arButton').style.background = 'linear-gradient(135deg, #666, #333)';
+            document.getElementById('arButton').style.cursor = 'not-allowed';
         }
     }
     
     function launchARNow() {
         document.getElementById('arLoading').style.display = 'flex';
-        document.getElementById('arStatus').textContent = 'Creating AR model with current settings...';
+        document.getElementById('arStatus').textContent = 'Creating AR model...';
         
-        // Get current animation states
-        const stateParams = getCurrentStateParams();
+        // Create a clone of the scene with current animation states
+        const exportScene = scene.clone();
         
-        // OPTION 1: Server-side generation (You need to create this endpoint)
-        // const usdzUrl = `https://your-server.com/generate-usdz?${stateParams}`;
+        // Update matrix world for all objects
+        exportScene.updateMatrixWorld(true);
         
-        // OPTION 2: Use pre-generated USDZ files for common states
-        // (You need to create these files in Reality Composer)
-        let usdzFile = 'toilet_final.usdz'; // Default
+        // Create a simple cube to test (remove this and use your model)
+        const testGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+        const testMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const testCube = new THREE.Mesh(testGeometry, testMaterial);
+        exportScene.add(testCube);
         
-        // Map current state to pre-generated files
-        if (animations.CoverAction.active && animations.SeatAction.active) {
-            usdzFile = 'toilet_cover_seat.usdz';
-        } else if (animations.CoverAction.active) {
-            usdzFile = 'toilet_cover.usdz';
-        } else if (animations.SeatAction.active) {
-            usdzFile = 'toilet_seat.usdz';
-        }
-        // Add more conditions for other states...
-        
-        console.log('Opening AR with state:', stateParams, 'File:', usdzFile);
-        
-        // Check if the USDZ file exists
-        fetch(usdzFile, { method: 'HEAD' })
-            .then(response => {
-                if (response.ok) {
-                    openARQuickLook(usdzFile);
-                } else {
-                    // Fallback to default
-                    console.log('USDZ file not found, using default');
-                    openARQuickLook('toilet_final.usdz');
-                }
-            })
-            .catch(() => {
-                // Fallback to default
-                openARQuickLook('toilet_final.usdz');
-            });
-    }
-    
-    function openARQuickLook(usdzFile) {
-        document.getElementById('arStatus').textContent = 'Opening AR Quick Look...';
-        
-        // Create AR link
-        const arLink = document.createElement('a');
-        arLink.href = usdzFile;
-        arLink.setAttribute('rel', 'ar');
-        
-        // Required AR badge
-        const img = document.createElement('img');
-        img.src = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#0a192f"/><text x="50" y="55" font-family="Arial" font-size="20" fill="white" text-anchor="middle">AR</text></svg>');
-        img.alt = 'AR';
-        img.width = 100;
-        img.height = 100;
-        img.style.cssText = 'position: absolute; opacity: 0; pointer-events: none;';
-        
-        arLink.appendChild(img);
-        document.body.appendChild(arLink);
-        
-        // Small delay then trigger AR
-        setTimeout(() => {
-            arLink.click();
+        // Export as GLB
+        exporter.parse(exportScene, (glb) => {
+            document.getElementById('arStatus').textContent = 'Opening AR...';
             
-            // Hide loading after 2 seconds
+            // Create blob URL
+            const blob = new Blob([glb], { type: 'model/gltf-binary' });
+            const url = URL.createObjectURL(blob);
+            
+            // Create AR link with GLB extension
+            const arLink = document.createElement('a');
+            arLink.href = url;
+            arLink.setAttribute('rel', 'ar');
+            arLink.setAttribute('download', 'toilet_current.glb');
+            
+            // Required AR badge
+            const img = document.createElement('img');
+            img.src = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#0a192f"/><text x="50" y="55" font-family="Arial" font-size="20" fill="white" text-anchor="middle">AR</text></svg>');
+            img.alt = 'AR';
+            img.width = 100;
+            img.height = 100;
+            img.style.cssText = 'position: absolute; opacity: 0; pointer-events: none;';
+            
+            arLink.appendChild(img);
+            document.body.appendChild(arLink);
+            
+            // Open AR
             setTimeout(() => {
-                document.getElementById('arLoading').style.display = 'none';
+                arLink.click();
                 
                 // Clean up
-                if (arLink.parentNode) {
-                    arLink.parentNode.removeChild(arLink);
-                }
-            }, 2000);
-        }, 100);
+                setTimeout(() => {
+                    URL.revokeObjectURL(url);
+                    if (arLink.parentNode) {
+                        arLink.parentNode.removeChild(arLink);
+                    }
+                    document.getElementById('arLoading').style.display = 'none';
+                }, 3000);
+            }, 100);
+            
+        }, { binary: true, animations: [] });
     }
     
     function onWindowResize() {
