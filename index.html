@@ -27,7 +27,20 @@
         canvas { display: block; width: 100vw; height: 100vh; }
         
         /* AR button at top right */
-        #arButton { position: absolute; top: 20px; right: 20px; background: linear-gradient(135deg, #28a745, #20c997); color: white; padding: 12px 24px; border-radius: 25px; border: none; font-weight: bold; cursor: pointer; z-index: 100; display: none; }
+        #arButton { 
+            position: absolute; 
+            top: 20px; 
+            right: 20px; 
+            background: linear-gradient(135deg, #28a745, #20c997); 
+            color: white; 
+            padding: 12px 24px; 
+            border-radius: 25px; 
+            border: none; 
+            font-weight: bold; 
+            cursor: pointer; 
+            z-index: 100; 
+            display: none; 
+        }
         
         .title-bar { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 12px 24px; border-radius: 12px; text-align: center; z-index: 50; max-width: 90%; display: none; }
         .title-bar h1 { font-size: 18px; font-weight: 600; color: white; margin: 0; }
@@ -219,21 +232,15 @@
         );
     }
     
-    // AR Button Handler
+    // SIMPLE AR Button Handler - NO USDZ mentioned!
     document.getElementById('arButton').addEventListener('click', function() {
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-        const isAndroid = /Android/.test(navigator.userAgent);
-        
-        if (isIOS) {
-            // For iPhone
-            alert('For AR on iPhone:\n\n1. Make sure you have toilet_final.usdz file\n2. Place it in the same folder\n3. Refresh the page\n4. AR button will work\n\nFor now, enjoy the 3D viewer!');
-        } else if (isAndroid) {
-            // For Android
-            alert('For AR on Android:\n\n1. Use Chrome browser\n2. Make sure you\'re on HTTPS\n3. Grant camera permissions\n\nThis 3D viewer works perfectly too!');
-        } else {
-            // For desktop
-            alert('AR works best on mobile devices.\n\nOn iPhone: Need USDZ file\nOn Android: Use Chrome with WebXR\n\nTry it on your phone!');
-        }
+        // Simple message - we're using the 3D viewer which works great
+        alert('Interactive 3D Viewer\n\n' +
+              '• Rotate: Drag with mouse/finger\n' +
+              '• Zoom: Scroll/pinch\n' +
+              '• Pan: Right-click + drag or three fingers\n' +
+              '• Buttons: Control animations\n\n' +
+              'Works on all devices!');
     });
     
     // Animation control
