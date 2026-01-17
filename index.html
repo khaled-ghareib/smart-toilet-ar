@@ -44,9 +44,6 @@
         .title-bar { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 12px 24px; border-radius: 12px; text-align: center; z-index: 50; max-width: 90%; display: none; }
         .title-bar h1 { font-size: 18px; font-weight: 600; color: white; margin: 0; }
         
-        /* Hidden AR link */
-        #iosARLink { display: none; }
-        
         @media (max-width: 768px) {
             .controls { bottom: 20px; padding: 12px; }
             button { font-size: 12px; padding: 12px 8px; min-height: 45px; }
@@ -58,11 +55,8 @@
 </head>
 <body>
 
-<!-- Hidden iOS AR Link - This is what actually triggers AR -->
-<a id="iosARLink" href="toilet_final.usdz" rel="ar">
-    <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTggMEMzLjYgMCAwIDMuNiAwIDhDMCAxMi40IDMuNiAxNiA4IDE2QzEyLjQgMTYgMTYgMTIuNCAxNiA4QzE2IDMuNiAxMi40IDAgOCAwWk04IDE0LjRDNC40IDE0LjQgMS41IDExLjUgMS41IDhDNS42IDEuNiAxMC40IDEuNiAxNC41IDhDMTQuNSAxMS41IDExLjYgMTQuNCA4IDE0LjRWMTQuNFpNOCAxMi44QzEwLjIgMTIuOCAxMiAxMSAxMiA4QzEyIDQuOCA5LjIgMiA4IDJDNi44IDIgNS42IDIuNyA0LjggMy45QzQuMSA1LjEgMy43IDYuNSAzLjcgOEMzLjcgMTEuMiA1LjggMTIuOCA4IDEyLjhWMTIuOFoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPgo=" alt="">
-    View in AR
-</a>
+<!-- Hidden AR link that gets triggered -->
+<a id="hiddenARLink" href="toilet_final.usdz" rel="ar" style="display: none;"></a>
 
 <button id="arButton">AR 👁️</button>
 
@@ -140,8 +134,8 @@
         // Load the 3D model
         loadModel();
         
-        // Setup AR button
-        setupARButton();
+        // Show AR button
+        document.getElementById('arButton').style.display = 'block';
         
         // Start animation loop
         animate();
@@ -186,7 +180,6 @@
                     gltf.animations.forEach(clip => {
                         const name = clip.name;
                         if (animationStates[name]) {
-                            // Create action and configure it properly
                             const action = mixer.clipAction(clip);
                             action.clampWhenFinished = true;
                             action.loop = THREE.LoopOnce;
@@ -195,7 +188,6 @@
                             animationStates[name].action = action;
                             animationStates[name].clip = clip;
                             
-                            // Play but immediately pause at start
                             action.play();
                             action.paused = true;
                             action.time = 0;
@@ -209,7 +201,6 @@
                 document.getElementById('loading').style.display = 'none';
                 document.querySelector('.controls').style.display = 'grid';
                 document.querySelector('.title-bar').style.display = 'block';
-                document.getElementById('arButton').style.display = 'block';
                 
             },
             (xhr) => {
@@ -219,55 +210,39 @@
             (error) => {
                 console.error('❌ Error loading model:', error);
                 document.getElementById('loading').innerHTML = `
-                    <div style="color: #ff6b6b; margin-bottom: 15px;">⚠️ Error loading 3D model</div>
+                    <div style="color: #ff6b6b; margin-bottom: 15px;">⚠️ Error loading model</div>
                     <p style="font-size: 12px;">Make sure toilet_final.glb is in the same folder</p>
-                    <button onclick="location.reload()" style="margin-top: 15px; padding: 10px 20px; background: #007bff; border: none; border-radius: 8px; color: white; cursor: pointer;">
-                        Retry
-                    </button>
                 `;
             }
         );
     }
     
-    function setupARButton() {
-        const arButton = document.getElementById('arButton');
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    // SIMPLE AR BUTTON - Just opens Quick Look if USDZ exists
+    document.getElementById('arButton').addEventListener('click', function() {
+        const arLink = document.getElementById('hiddenARLink');
         
-        if (isIOS) {
-            // iOS device - show AR button
-            arButton.style.display = 'block';
-            arButton.onclick = launchIOSAR;
-        } else {
-            // For non-iOS, show message
-            arButton.style.display = 'block';
-            arButton.onclick = function() {
-                alert('For AR:\n\n• iPhone/iPad: Safari on iOS 12+\n• Android: Chrome 81+ with WebXR\n• Desktop: Chrome with WebXR flags enabled\n\nMake sure you use HTTPS (upload to GitHub Pages)!');
-            };
-        }
-    }
-    
-    function launchIOSAR() {
-        const arLink = document.getElementById('iosARLink');
-        
-        // Check if USDZ file exists by trying to load it
-        fetch('toilet_final.usdz')
-            .then(response => {
-                if (response.ok) {
-                    // USDZ exists, trigger AR
-                    console.log('USDZ file found, launching AR...');
-                    arLink.click();
+        // Try to open the AR link directly
+        try {
+            arLink.click();
+            
+            // If nothing happens after 1 second, show message
+            setTimeout(() => {
+                // Check if we're on iOS
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                
+                if (isIOS) {
+                    alert('To use AR on iPhone:\n\n1. Make sure you have toilet_final.usdz file\n2. Place it in the same folder as this HTML\n3. Open in Safari (not Chrome)\n4. Try the AR button again');
                 } else {
-                    // USDZ doesn't exist
-                    alert('To use AR on iPhone:\n\n1. Convert your GLB file to USDZ format\n2. Name it "toilet_final.usdz"\n3. Place it in the same folder as this HTML file\n4. Refresh the page\n\nFor now, enjoy the 3D viewer!');
+                    alert('For AR on iPhone:\n\n• Create toilet_final.usdz file\n• Place in same folder\n• Open in Safari browser');
                 }
-            })
-            .catch(error => {
-                console.log('USDZ file not found');
-                alert('To use AR on iPhone:\n\n1. Convert your GLB file to USDZ format\n2. Name it "toilet_final.usdz"\n3. Place it in the same folder as this HTML file\n4. Refresh the page\n\nFor now, enjoy the 3D viewer!');
-            });
-    }
+            }, 1000);
+        } catch (error) {
+            console.error('Error opening AR:', error);
+            alert('AR failed to open. Make sure you have toilet_final.usdz in the same folder.');
+        }
+    });
     
-    // Animation control - FIXED VERSION
+    // Animation control
     function toggleAnimation(animationName) {
         const state = animationStates[animationName];
         if (!state || !state.action || !state.clip) {
@@ -275,32 +250,25 @@
             return;
         }
         
-        // Toggle state
         state.isOpen = !state.isOpen;
-        
-        // Update button
         updateButton(animationName);
         
-        // Get target time (1 = fully open, 0 = fully closed)
         const targetTime = state.isOpen ? state.clip.duration : 0;
+        animateToState(state.action, targetTime, 0.5);
         
-        // Smoothly animate to target time
-        animateToState(state.action, state.clip.duration, targetTime, 0.5);
-        
-        // Special logic: if closing cover, also close seat
         if (animationName === 'CoverAction' && !state.isOpen) {
             const seatState = animationStates.SeatAction;
             if (seatState && seatState.isOpen) {
                 setTimeout(() => {
                     seatState.isOpen = false;
                     updateButton('SeatAction');
-                    animateToState(seatState.action, seatState.clip.duration, 0, 0.5);
+                    animateToState(seatState.action, 0, 0.5);
                 }, 300);
             }
         }
     }
     
-    function animateToState(action, clipDuration, targetTime, duration) {
+    function animateToState(action, targetTime, duration) {
         const startTime = action.time;
         const start = performance.now();
         
@@ -308,7 +276,6 @@
             const elapsed = performance.now() - start;
             const progress = Math.min(elapsed / (duration * 1000), 1);
             
-            // Ease in-out
             const easedProgress = progress < 0.5 
                 ? 2 * progress * progress 
                 : 1 - Math.pow(-2 * progress + 2, 2) / 2;
@@ -352,15 +319,13 @@
             const state = animationStates[name];
             state.isOpen = false;
             
-            if (state.action && state.clip) {
-                // Animate back to start
-                animateToState(state.action, state.clip.duration, 0, 0.5);
+            if (state.action) {
+                animateToState(state.action, 0, 0.5);
             }
             
             updateButton(name);
         });
         
-        // Visual feedback
         const resetBtn = document.getElementById('btn-Reset');
         resetBtn.style.background = '#28a745';
         setTimeout(() => {
@@ -375,21 +340,16 @@
         
         const delta = clock.getDelta();
         
-        // Update animations
         if (mixer) {
             mixer.update(delta);
         }
         
-        // Update controls
         controls.update();
-        
-        // Render scene
         renderer.render(scene, camera);
     }
     
-    // Initialize when page loads
+    // Initialize
     window.addEventListener('DOMContentLoaded', () => {
-        // Setup button listeners
         document.querySelectorAll('[data-animation]').forEach(button => {
             if (button.id !== 'btn-Reset') {
                 button.addEventListener('click', (e) => {
@@ -401,8 +361,6 @@
         });
         
         document.getElementById('btn-Reset').addEventListener('click', resetAll);
-        
-        // Initialize the app
         init();
     });
 </script>
