@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Icon Smart Toilet - AR Showcase</title>
+<script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+<style>
+  body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #111; color: white; font-family: sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+  model-viewer { width: 100%; max-width: 600px; height: 80vh; }
+  .buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 20px; }
+  button { padding: 12px 18px; font-size: 14px; border-radius: 10px; border: none; cursor: pointer; background: #4CAF50; color: white; transition: all 0.2s; }
+  button.active { background: #2E7D32; }
+  button:hover { transform: translateY(-2px); }
+</style>
+</head>
+<body>
+
+<model-viewer id="toiletViewer"
+  src="https://drive.google.com/uc?export=download&id=1ZR7PXKuLp3SBoA-J2T1mJqvgIvNXYeAd"
+  ios-src="https://drive.google.com/uc?export=download&id=1MXrYLVFu1SLJddd-TUdf17E1u3R0l8f3"
+  ar
+  ar-modes="quick-look scene-viewer"
+  camera-controls
+  auto-rotate
+  environment-image="neutral">
+</model-viewer>
+
+<div class="buttons">
+  <button data-pose="toilet_closed" class="active">Closed</button>
+  <button data-pose="toilet_cover_open">Cover Only</button>
+  <button data-pose="toilet_cover_seat_open">Cover + Seat</button>
+  <button data-pose="toilet_bidet_ready">Bidet Lid</button>
+  <button data-pose="toilet_bidet_deployed">Bidet Deployed</button>
+  <button data-pose="toilet_full_active">Full Active</button>
+</div>
+
+<script>
+  const viewer = document.getElementById('toiletViewer');
+  const buttons = document.querySelectorAll('.buttons button');
+
+  let currentPose = 'toilet_closed';
+
+  // Map poses to GLB + USDZ
+  const poses = {
+    toilet_closed: { 
+      glb: 'https://drive.google.com/uc?export=download&id=1ZR7PXKuLp3SBoA-J2T1mJqvgIvNXYeAd',
+      usdz: 'https://drive.google.com/uc?export=download&id=1MXrYLVFu1SLJddd-TUdf17E1u3R0l8f3'
+    },
+    toilet_cover_open: { 
+      glb: 'https://drive.google.com/uc?export=download&id=1ASia-dhs5NnKT8vR1jwjgBRRETShpFhx',
+      usdz: 'https://drive.google.com/uc?export=download&id=1f7GsCkxiRo0M4g5p-EPfQlZT9GLqxU_V'
+    },
+    toilet_cover_seat_open: { 
+      glb: 'https://drive.google.com/uc?export=download&id=1CJkrwSc00GVReEGHY03xm0ZqPtOcsMXS',
+      usdz: 'https://drive.google.com/uc?export=download&id=1O6WK2GpczViuFTBe55Ah6jhY9ttaErK9'
+    },
+    toilet_bidet_ready: { 
+      glb: 'https://drive.google.com/uc?export=download&id=1N0y28en_jy6RXZqzP5GXcMgFNgsMHMqh',
+      usdz: 'https://drive.google.com/uc?export=download&id=1cVRcyq22ZLZCmUsRpm2SBdTemi4hKgE7'
+    },
+    toilet_bidet_deployed: { 
+      glb: 'https://drive.google.com/uc?export=download&id=1Gsl7CeBrVukTH5iGEWdA149gQ7-HrrSz',
+      usdz: 'https://drive.google.com/uc?export=download&id=1_9Ml9QcKdSepTZaoY6V83LzwrcHIoSHU'
+    },
+    toilet_full_active: { 
+      glb: 'https://drive.google.com/uc?export=download&id=1W2bJOjxU8dlPCl_ccJfIZy6nnMH4GhF5',
+      usdz: 'https://drive.google.com/uc?export=download&id=1ypC0aOWzwC_pgx_la0fEtapOH4Nowokr'
+    }
+  };
+
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const poseName = btn.getAttribute('data-pose');
+      if (poseName === currentPose) return;
+
+      currentPose = poseName;
+
+      // Update model-viewer src
+      viewer.src = poses[poseName].glb;
+      viewer.iosSrc = poses[poseName].usdz;
+
+      // Update active button styles
+      buttons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+</script>
+
+</body>
+</html>
