@@ -15,6 +15,7 @@
       align-items: center;
       justify-content: center;
       min-height: 100vh;
+      overflow: hidden;
     }
     h2 { margin: 15px 0; font-weight: 300; }
     #container { width: 100%; max-width: 800px; height: 70vh; background: #1a1a1a; cursor: grab; }
@@ -31,14 +32,13 @@
       font-size: 14px;
       border: none;
       border-radius: 8px;
-      background: #2e2e2e; /* Your preferred Grey */
+      background: #2e2e2e; /* Original Grey */
       color: white;
       cursor: pointer;
       transition: all 0.2s ease;
     }
     button:hover { background: #444; }
-    /* Toggle On State */
-    button.active { background: #4CAF50; } 
+    button.active { background: #4CAF50; } /* Original Green */
     
     #arButton {
       background: #ffffff;
@@ -78,8 +78,9 @@
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x111111);
 
-  const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-  camera.position.set(2, 2, 3);
+  // Camera adjusted for a centered 0,0,0 model
+  const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+  camera.position.set(0, 0.5, 1.5); // Closer and slightly elevated
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(container.clientWidth, container.clientHeight);
@@ -88,27 +89,21 @@
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
+  controls.dampingFactor = 0.05;
+  controls.target.set(0, 0.4, 0); // Focus the rotation on the middle of the toilet
 
-  // Better Lighting
-  const light = new THREE.HemisphereLight(0xffffff, 0x444444, 2.5);
+  const light = new THREE.HemisphereLight(0xffffff, 0x444444, 3);
   scene.add(light);
-  const pointLight = new THREE.PointLight(0xffffff, 1);
-  pointLight.position.set(5, 5, 5);
-  scene.add(pointLight);
 
   const loader = new GLTFLoader();
   let mixer;
   let actions = {};
   const states = { CoverAction: false, SeatAction: false, Bidet: false, AirventAction: false };
 
-  // LOAD MODEL
   loader.load(
     'https://cdn.jsdelivr.net/gh/khaled-ghareib/smart-toilet-ar@main/toilet_web.glb',
     (gltf) => {
       scene.add(gltf.scene);
-      
-      // Since you moved the model to 0,0,0 in Blender, we don't need to auto-center here.
-      
       mixer = new THREE.AnimationMixer(gltf.scene);
       gltf.animations.forEach((clip) => {
         const action = mixer.clipAction(clip);
@@ -116,12 +111,8 @@
         action.clampWhenFinished = true;
         actions[clip.name] = action;
       });
-
-      console.log("Model and animations loaded successfully.");
       animate();
-    },
-    undefined,
-    (err) => { console.error("Critical Load Error:", err); }
+    }
   );
 
   const clock = new THREE.Clock();
@@ -132,13 +123,11 @@
     renderer.render(scene, camera);
   }
 
-  // REVERSE/FORWARD LOGIC
-  function toggleAnim(name, shouldOpen) {
+  function toggleAnim(name, open) {
     const action = actions[name];
     if (!action) return;
-
     action.paused = false;
-    if (shouldOpen) {
+    if (open) {
       action.timeScale = 1;
       action.play();
     } else {
@@ -148,14 +137,11 @@
     }
   }
 
-  // BUTTON INTERACTION
   document.querySelectorAll('button[data-action]').forEach(btn => {
     btn.addEventListener('click', () => {
       if (!mixer) return;
       const key = btn.dataset.action;
       states[key] = !states[key];
-
-      // Visual Toggle
       btn.classList.toggle('active', states[key]);
 
       if (key === 'Bidet') {
@@ -166,49 +152,42 @@
           toggleAnim('BidetAction', false);
           setTimeout(() => toggleAnim('BidetCoverAction', false), 500);
         }
-      } 
-      else if (key === 'CoverAction') {
-        if (!states.CoverAction) {
-          // Rule: If closing cover, close seat first
-          if (states.SeatAction) {
-            states.SeatAction = false;
-            document.getElementById('btn-SeatAction').classList.remove('active');
-            toggleAnim('SeatAction', false);
-            setTimeout(() => toggleAnim('CoverAction', false), 500);
-          } else {
-            toggleAnim('CoverAction', false);
-          }
+      } else if (key === 'CoverAction') {
+        if (!states.CoverAction && states.SeatAction) {
+          states.SeatAction = false;
+          document.getElementById('btn-SeatAction').classList.remove('active');
+          toggleAnim('SeatAction', false);
+          setTimeout(() => toggleAnim('CoverAction', false), 500);
         } else {
-          toggleAnim('CoverAction', true);
+          toggleAnim('CoverAction', states[key]);
         }
-      } 
-      else {
+      } else {
         toggleAnim(key, states[key]);
       }
     });
   });
 
-  // UNIVERSAL AR BUTTON
+  // AR Logic
   document.getElementById('arButton').addEventListener('click', () => {
     const iosUrl = 'https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.usdz';
     const androidUrl = 'https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.glb';
     
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isAndroid = /Android/.test(navigator.userAgent);
 
     if (isIOS) {
-      // iOS Quick Look Trigger
       const a = document.createElement('a');
       a.rel = 'ar';
       a.href = iosUrl;
       const img = document.createElement('img');
       a.appendChild(img);
       a.click();
-    } else {
-      // Android Scene Viewer Trigger
-      // We encode the URL to ensure it passes through the intent correctly
-      const encodedUrl = encodeURIComponent(androidUrl);
+    } else if (isAndroid) {
+      // Scene Viewer Intent
       const sceneViewerUrl = `intent://arvr.google.com/scene-viewer/1.0?file=${androidUrl}&mode=ar_only#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;S.browser_fallback_url=https://developers.google.com/ar;end;`;
       window.location.href = sceneViewerUrl;
+    } else {
+      alert("Please use a mobile device to view in AR.");
     }
   });
 
