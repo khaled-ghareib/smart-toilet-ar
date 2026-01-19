@@ -34,17 +34,19 @@
     flex-wrap: wrap;
   }
 
-  button {
+  button, a {
     padding: 10px 16px;
     font-size: 14px;
     border: none;
     border-radius: 6px;
     cursor: pointer;
+    text-decoration: none;
+    background: #eee;
+    color: #000;
   }
 
   #arBtn {
     background: #00c853;
-    color: black;
     font-weight: bold;
   }
 </style>
@@ -55,11 +57,19 @@
 <div id="title">Icon Smart Toilet</div>
 
 <div id="buttons">
-  <button onclick="playCover()">Cover</button>
-  <button onclick="playSeat()">Seat</button>
-  <button onclick="playBidet()">Bidet</button>
-  <button onclick="playAirvent()">Air Vent</button>
-  <button id="arBtn" onclick="openAR()">View in AR</button>
+  <button id="coverBtn">Cover</button>
+  <button id="seatBtn">Seat</button>
+  <button id="bidetBtn">Bidet</button>
+  <button id="airBtn">Air Vent</button>
+
+  <!-- REAL LINK – NO JS -->
+  <a
+    id="arBtn"
+    href="https://www.arviewer.io/view/0b08b77e-9fd8-473a-a65d-1ace5390b65b"
+    target="_blank"
+  >
+    View in AR
+  </a>
 </div>
 
 <script type="module">
@@ -86,12 +96,11 @@ function init() {
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
-  const light1 = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
-  scene.add(light1);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.2));
 
-  const light2 = new THREE.DirectionalLight(0xffffff, 1);
-  light2.position.set(3, 5, 2);
-  scene.add(light2);
+  const dir = new THREE.DirectionalLight(0xffffff, 1);
+  dir.position.set(3, 5, 2);
+  scene.add(dir);
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
@@ -120,12 +129,11 @@ function loadModel() {
         actions[clip.name] = action;
       });
 
-      console.log('Loaded animations:', Object.keys(actions));
+      bindUI();
+      console.log('Animations loaded:', Object.keys(actions));
     },
     undefined,
-    (error) => {
-      console.error('GLB load error:', error);
-    }
+    (err) => console.error(err)
   );
 }
 
@@ -135,18 +143,16 @@ function playOnce(name) {
   actions[name].play();
 }
 
-window.playCover = () => playOnce('CoverAction');
-window.playSeat = () => playOnce('SeatAction');
-window.playAirvent = () => playOnce('AirventAction');
+function bindUI() {
+  document.getElementById('coverBtn').onclick = () => playOnce('CoverAction');
+  document.getElementById('seatBtn').onclick = () => playOnce('SeatAction');
+  document.getElementById('airBtn').onclick  = () => playOnce('AirventAction');
 
-window.playBidet = () => {
-  playOnce('BidetCoverAction');
-  setTimeout(() => playOnce('BidetAction'), 500);
-};
-
-window.openAR = () => {
-  window.location.href = 'https://www.arviewer.io/view/0b08b77e-9fd8-473a-a65d-1ace5390b65b';
-};
+  document.getElementById('bidetBtn').onclick = () => {
+    playOnce('BidetCoverAction');
+    setTimeout(() => playOnce('BidetAction'), 500);
+  };
+}
 
 function animate() {
   requestAnimationFrame(animate);
