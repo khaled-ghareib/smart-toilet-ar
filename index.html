@@ -14,7 +14,7 @@
       flex-direction:column;
       align-items:center;
       justify-content:center;
-      height:100vh;
+      min-height:100vh;
     }
 
     h2 {
@@ -53,10 +53,9 @@
 
 <h2>Icon Smart Toilet</h2>
 
+<!-- Web model with animations -->
 <model-viewer id="toiletViewer"
   src="toilet_web.glb"
-  ar
-  ar-modes="quick-look scene-viewer"
   camera-controls
   auto-rotate
   environment-image="neutral"
@@ -76,7 +75,7 @@
   const buttons = document.querySelectorAll('.buttons button');
   const arButton = document.getElementById('arButton');
 
-  // Map animations by index for simplicity (model must have animations in the right order)
+  // Animation index mapping (update if your GLB has different order)
   const animationIndices = {
     CoverAction: 0,
     SeatAction: 1,
@@ -85,6 +84,7 @@
     AirventAction: 4
   };
 
+  // Track which animations have played
   let played = {};
 
   buttons.forEach(btn => {
@@ -96,7 +96,7 @@
       // Bidet chains two animations
       if (action === "Bidet") {
         if (!played.BidetCoverAction) {
-          viewer.animationName = undefined; // reset
+          viewer.animationName = undefined;
           viewer.playAnimation(animationIndices.BidetCoverAction);
           played.BidetCoverAction = true;
           setTimeout(() => {
@@ -109,7 +109,7 @@
       } else {
         // Normal animations
         if (!played[action]) {
-          viewer.animationName = undefined; // reset
+          viewer.animationName = undefined;
           viewer.playAnimation(animationIndices[action]);
           played[action] = true;
         }
@@ -117,9 +117,10 @@
     });
   });
 
-  // AR button goes to ARViewer
+  // AR button opens the new .usdz file in ARViewer
   arButton.addEventListener('click', () => {
-    window.open('https://www.arviewer.io/view/0b08b77e-9fd8-473a-a65d-1ace5390b65b', '_blank');
+    // Link to your ARViewer page with the new USDZ
+    window.open('https://www.arviewer.io/viewer/?file=https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.usdz', '_blank');
   });
 </script>
 
