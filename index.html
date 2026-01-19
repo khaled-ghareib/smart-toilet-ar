@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Icon Smart Toilet</title>
+  
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.158.0/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/loaders/GLTFLoader.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/OrbitControls.js"></script>
@@ -35,7 +36,7 @@
       font-size: 16px;
       border: none;
       border-radius: 8px;
-      background: #2e2e2e; /* Your preferred Grey */
+      background: #2e2e2e; /* Grey buttons as requested */
       color: white;
       cursor: pointer;
       transition: background 0.2s, transform 0.2s;
@@ -44,9 +45,8 @@
       background: #444;
       transform: translateY(-2px);
     }
-    /* When toggled ON, turn Green */
     button.active {
-      background: #4CAF50;
+      background: #4CAF50; /* Green when active */
     }
     #arButton {
       background: #ffffff;
@@ -69,7 +69,6 @@
 </div>
 
 <script>
-  // Wait for scripts to load
   window.onload = function() {
     const container = document.getElementById('container');
     const scene = new THREE.Scene();
@@ -86,7 +85,7 @@
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
 
-    const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.8);
+    const light = new THREE.HemisphereLight(0xffffff, 0x444444, 2.0);
     scene.add(light);
 
     const loader = new THREE.GLTFLoader();
@@ -94,7 +93,7 @@
     let actions = {};
     const states = { CoverAction: false, SeatAction: false, Bidet: false, AirventAction: false };
 
-    // Direct GitHub URL via jsDelivr to fix CORS/Loading issues
+    // Primary Interactive Model
     loader.load(
       'https://cdn.jsdelivr.net/gh/khaled-ghareib/smart-toilet-ar@main/toilet_web.glb',
       function(gltf) {
@@ -111,7 +110,7 @@
         animate();
       },
       undefined,
-      function(err) { console.error('Model Load Error:', err); }
+      function(err) { console.error('Interactive model failed to load:', err); }
     );
 
     const clock = new THREE.Clock();
@@ -156,7 +155,7 @@
           if (!states.CoverAction) {
             if (states.SeatAction) {
               states.SeatAction = false;
-              document.getElementById('btn-SeatAction').classList.remove('active');
+              document.getElementById('btn-btn-SeatAction')?.classList.remove('active');
               toggleAnim('SeatAction', false);
               setTimeout(() => toggleAnim('CoverAction', false), 500);
             } else {
@@ -172,20 +171,25 @@
       };
     });
 
-    // AR Button Logic
+    // Cross-Platform AR Logic
     document.getElementById('arButton').onclick = function() {
-      const usdzUrl = 'https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.usdz';
+      const iosUrl = 'https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.usdz';
+      const androidUrl = 'https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.glb';
+      
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
       if (isIOS) {
+        // iOS Quick Look
         const a = document.createElement('a');
         a.setAttribute('rel', 'ar');
-        a.setAttribute('href', usdzUrl);
+        a.setAttribute('href', iosUrl);
         const img = document.createElement('img');
         a.appendChild(img);
         a.click();
       } else {
-        alert("To view in AR, please use an iPhone or iPad. On this device, you can use the interactive 3D viewer above.");
+        // Android Intent for Scene Viewer
+        const intent = `intent://arvr.google.com/scene-viewer/1.0?file=${androidUrl}&mode=ar_only#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;S.browser_fallback_url=https://developers.google.com/ar;end;`;
+        window.location.href = intent;
       }
     };
 
