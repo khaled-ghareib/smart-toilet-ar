@@ -47,6 +47,9 @@
     .buttons button:hover {
       transform: translateY(-2px);
     }
+    .buttons button.active {
+      background: #2E7D32;
+    }
     .ar-button {
       margin-top: 20px;
       padding: 14px 24px;
@@ -86,7 +89,8 @@
 
 <script>
 let scene, camera, renderer, controls, clock, mixer;
-let animations = {}; // store actions
+let animations = {}; // store animation actions
+let activeAnimations = new Set();
 
 init();
 animate();
@@ -115,38 +119,56 @@ function init() {
   clock = new THREE.Clock();
 
   const loader = new THREE.GLTFLoader();
-  loader.load('toilet_web.glb', function(gltf) {
-    const model = gltf.scene;
-    scene.add(model);
+  loader.load(
+    'https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_web.glb', 
+    function(gltf) {
+      const model = gltf.scene;
+      scene.add(model);
 
-    // setup mixer and actions
-    mixer = new THREE.AnimationMixer(model);
-    gltf.animations.forEach((clip) => {
-      animations[clip.name] = mixer.clipAction(clip);
-      animations[clip.name].clampWhenFinished = true; // stop at last frame
-      animations[clip.name].loop = THREE.LoopOnce;
-    });
-  });
+      mixer = new THREE.AnimationMixer(model);
+
+      gltf.animations.forEach((clip) => {
+        const action = mixer.clipAction(clip);
+        action.clampWhenFinished = true; // stops at final frame
+        action.loop = THREE.LoopOnce;
+        animations[clip.name] = action;
+      });
+    },
+    undefined,
+    function(error) {
+      console.error("Error loading GLB:", error);
+    }
+  );
 
   window.addEventListener('resize', onWindowResize, false);
 
-  // button functionality
   const buttons = document.querySelectorAll('.buttons button');
   buttons.forEach(btn => {
     btn.addEventListener('click', () => {
       const anim = btn.getAttribute('data-animation');
 
+      // Update button highlight
+      buttons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
       if(anim === "BidetActionGroup") {
-        // play two animations in sequence
-        if(animations["BidetCoverAction"]) animations["BidetCoverAction"].reset().play();
+        if(animations["BidetCoverAction"] && !activeAnimations.has("BidetCoverAction")) {
+          animations["BidetCoverAction"].reset().play();
+          activeAnimations.add("BidetCoverAction");
+        }
         setTimeout(() => {
-          if(animations["BidetAction"]) animations["BidetAction"].reset().play();
+          if(animations["BidetAction"] && !activeAnimations.has("BidetAction")) {
+            animations["BidetAction"].reset().play();
+            activeAnimations.add("BidetAction");
+          }
         }, 500);
         return;
       }
 
-      // normal animations
-      if(animations[anim]) animations[anim].reset().play();
+      if(animations[anim] && !activeAnimations.has(anim)) {
+        animations[anim].reset().play();
+        activeAnimations.add(anim);
+      }
     });
   });
 }
