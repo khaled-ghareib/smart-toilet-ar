@@ -16,10 +16,28 @@
       min-height: 100vh;
     }
     h2 { margin: 10px 0; }
-    #container { width: 100%; max-width: 600px; height: 80vh; }
-    .buttons { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
-    button { padding: 10px 16px; border: none; border-radius: 6px; background: #4CAF50; color: white; cursor: pointer; }
-    button:hover { background: #2E7D32; }
+    #container { width: 100%; max-width: 800px; height: 80vh; }
+    .buttons {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 15px;
+    }
+    button {
+      padding: 16px 24px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      background: #4CAF50;
+      color: white;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.2s;
+    }
+    button:hover {
+      background: #2E7D32;
+      transform: translateY(-2px);
+    }
   </style>
 </head>
 <body>
@@ -62,6 +80,7 @@
   let mixer;
   let actions = {};
 
+  // CORS-friendly raw URL from GitHub via jsDelivr
   loader.load(
     'https://cdn.jsdelivr.net/gh/khaled-ghareib/smart-toilet-ar@main/toilet_web.glb',
     (gltf) => {
