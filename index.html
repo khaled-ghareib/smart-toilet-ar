@@ -45,6 +45,11 @@
       color: #000;
       font-weight: bold;
     }
+
+    /* This is the secret for Safari: A hidden but permanent AR link */
+    #safari-ar-link {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -59,6 +64,10 @@
   <button id="btn-AirventAction" data-action="AirventAction">Air Vent</button>
   <button id="arButton">View in AR</button>
 </div>
+
+<a id="safari-ar-link" rel="ar" href="https://cdn.jsdelivr.net/gh/khaled-ghareib/smart-toilet-ar@main/toilet_full_active.usdz#apple_pay_button=none">
+  <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="AR">
+</a>
 
 <script type="importmap">
   {
@@ -96,7 +105,6 @@
   let mixer, actions = {};
   const states = { CoverAction: false, SeatAction: false, Bidet: false, AirventAction: false };
 
-  // FORCED CENTERING LOGIC
   loader.load(
     'https://cdn.jsdelivr.net/gh/khaled-ghareib/smart-toilet-ar@main/toilet_web.glb',
     (gltf) => {
@@ -126,7 +134,6 @@
     renderer.render(scene, camera);
   }
 
-  // REVERSE/FORWARD LOGIC
   function toggleAnim(name, open) {
     const action = actions[name];
     if (!action) return;
@@ -172,28 +179,17 @@
     });
   });
 
-  // AR TRIGGER LOGIC
-  document.getElementById('arButton').addEventListener('click', () => {
-    // We use the CDN link to improve loading speed and ensure correct headers
-    const iosUrl = 'https://cdn.jsdelivr.net/gh/khaled-ghareib/smart-toilet-ar@main/toilet_full_active.usdz';
+  // FINAL AR TRIGGER LOGIC
+  document.getElementById('arButton').addEventListener('click', (e) => {
     const androidUrl = 'https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.glb';
-    
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
     if (isIOS) {
-      const anchor = document.createElement('a');
-      anchor.setAttribute('rel', 'ar');
-      // Adding #apple_pay_button=none can sometimes speed up Quick Look initialization
-      anchor.setAttribute('href', iosUrl + '#apple_pay_button=none');
-      
-      const img = document.createElement('img');
-      img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-      anchor.appendChild(img);
-      
-      document.body.appendChild(anchor);
-      anchor.click();
-      setTimeout(() => document.body.removeChild(anchor), 100);
+      // Safari requires a click on a real, existing DOM element for AR
+      const safariLink = document.getElementById('safari-ar-link');
+      safariLink.click();
     } else {
+      // Android Scene Viewer Logic
       const sceneViewerIntent = `intent://arvr.google.com/scene-viewer/1.0?file=${androidUrl}&mode=ar_only#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;S.browser_fallback_url=https://developers.google.com/ar;end;`;
       window.location.href = sceneViewerIntent;
     }
