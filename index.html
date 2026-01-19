@@ -23,7 +23,7 @@
     h2 { margin: 15px 0; font-weight: 300; }
     #container { width: 100%; max-width: 800px; height: 70vh; background: #1a1a1a; cursor: grab; }
     
-    /* Hidden Model-Viewer used only for AR triggering */
+    /* Hidden trigger for AR mode */
     #ar-trigger { display: none; }
 
     .buttons {
@@ -39,13 +39,13 @@
       font-size: 14px;
       border: none;
       border-radius: 8px;
-      background: #2e2e2e; /* Original Grey */
+      background: #2e2e2e; /* Grey */
       color: white;
       cursor: pointer;
       transition: all 0.2s ease;
     }
     button:hover { background: #444; }
-    button.active { background: #4CAF50; } /* Original Green Toggle */
+    button.active { background: #4CAF50; } /* Green */
     
     #arButton {
       background: #ffffff;
@@ -61,8 +61,8 @@
 
 <model-viewer id="ar-trigger" 
               src="https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.glb" 
-              ar ar-modes="webxr scene-viewer quick-look" 
-              ios-src="https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.usdz">
+              ar ar-modes="webxr scene-viewer quick-look"
+              ios-src="https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.glb">
 </model-viewer>
 
 <div class="buttons">
@@ -109,6 +109,7 @@
   let mixer, actions = {};
   const states = { CoverAction: false, SeatAction: false, Bidet: false, AirventAction: false };
 
+  // Load the web-optimized interactive model
   loader.load(
     'https://cdn.jsdelivr.net/gh/khaled-ghareib/smart-toilet-ar@main/toilet_web.glb',
     (gltf) => {
@@ -183,10 +184,10 @@
     });
   });
 
-  // UNIVERSAL AR TRIGGER
+  // Universal Trigger Logic
   document.getElementById('arButton').addEventListener('click', () => {
     const mv = document.getElementById('ar-trigger');
-    mv.activateAR();
+    mv.activateAR(); // Automatically handles iOS (Quick Look) and Android (Scene Viewer)
   });
 
   window.addEventListener('resize', () => {
