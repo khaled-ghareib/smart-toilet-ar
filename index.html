@@ -67,7 +67,7 @@
 
   <model-viewer
     id="toiletViewer"
-    src="toilet_web.glb"
+    src="https://pub-0426d526ef114881be492fff3021cec3.r2.dev/790f3b98-798d-4442-9113-86107e9c2ae4/1768809086069-toilet_full_active.glb"
     camera-controls
     auto-rotate
     environment-image="neutral"
@@ -80,7 +80,17 @@
     <button data-animation="AirventAction">Air Vent</button>
   </div>
 
-  <button class="ar-button" onclick="window.open('https://www.arviewer.io/view/0b08b77e-9fd8-473a-a65d-1ace5390b65b', '_blank')">
+  <!-- Direct AR button using the same GLB -->
+  <model-viewer
+    id="arButton"
+    src="https://pub-0426d526ef114881be492fff3021cec3.r2.dev/790f3b98-798d-4442-9113-86107e9c2ae4/1768809086069-toilet_full_active.glb"
+    ios-src="https://pub-0426d526ef114881be492fff3021cec3.r2.dev/790f3b98-798d-4442-9113-86107e9c2ae4/1768809086069-toilet_full_active.usdz"
+    ar
+    ar-modes="quick-look scene-viewer"
+    style="display:none;"
+  ></model-viewer>
+
+  <button class="ar-button" onclick="document.getElementById('arButton').activateAR()">
     View in AR
   </button>
 
@@ -88,26 +98,29 @@
     const viewer = document.getElementById('toiletViewer');
     const buttons = document.querySelectorAll('.buttons button');
 
+    // Track currently playing animations
+    const activeAnimations = new Set();
+
     buttons.forEach(btn => {
       btn.addEventListener('click', () => {
         const anim = btn.getAttribute('data-animation');
 
-        // Remove active class from all buttons
+        // Highlight clicked button
         buttons.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
 
-        // Special case for Bidet button
+        // Bidet button plays two animations in sequence
         if(anim === "BidetActionGroup") {
-          viewer.pause();
+          activeAnimations.add("BidetCoverAction");
           viewer.animationName = "BidetCoverAction";
           viewer.play();
           setTimeout(() => {
-            viewer.pause();
+            activeAnimations.add("BidetAction");
             viewer.animationName = "BidetAction";
             viewer.play();
-          }, 500); // 0.5 seconds delay
+          }, 500);
         } else {
-          viewer.pause();
+          if(!activeAnimations.has(anim)) activeAnimations.add(anim);
           viewer.animationName = anim;
           viewer.play();
         }
