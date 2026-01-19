@@ -30,8 +30,8 @@
     display: flex;
     justify-content: center;
     gap: 10px;
-    z-index: 10;
     flex-wrap: wrap;
+    z-index: 10;
   }
 
   button, a {
@@ -40,9 +40,9 @@
     border: none;
     border-radius: 6px;
     cursor: pointer;
-    text-decoration: none;
     background: #eee;
     color: #000;
+    text-decoration: none;
   }
 
   #arBtn {
@@ -62,7 +62,6 @@
   <button id="bidetBtn">Bidet</button>
   <button id="airBtn">Air Vent</button>
 
-  <!-- REAL LINK – NO JS -->
   <a
     id="arBtn"
     href="https://www.arviewer.io/view/0b08b77e-9fd8-473a-a65d-1ace5390b65b"
@@ -73,70 +72,65 @@
 </div>
 
 <script type="module">
+/* ✅ CORRECT CDN IMPORTS (GITHUB PAGES SAFE) */
 import * as THREE from 'https://unpkg.com/three@0.158.0/build/three.module.js';
 import { GLTFLoader } from 'https://unpkg.com/three@0.158.0/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'https://unpkg.com/three@0.158.0/examples/jsm/controls/OrbitControls.js';
 
 let scene, camera, renderer, mixer;
 let actions = {};
-let clock = new THREE.Clock();
+const clock = new THREE.Clock();
 
-init();
-loadModel();
-animate();
+/* ---------- INIT ---------- */
+scene = new THREE.Scene();
+scene.background = new THREE.Color(0x111111);
 
-function init() {
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x111111);
+camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(0, 1.5, 3);
 
-  camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-  camera.position.set(0, 1.5, 3);
+renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-  renderer = new THREE.WebGLRenderer({ antialias: true });
+scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.2));
+
+const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+dirLight.position.set(3, 5, 2);
+scene.add(dirLight);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
-  document.body.appendChild(renderer.domElement);
+});
 
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.2));
+/* ---------- LOAD MODEL ---------- */
+const loader = new GLTFLoader();
+loader.load(
+  './toilet_web.glb',
+  (gltf) => {
+    scene.add(gltf.scene);
 
-  const dir = new THREE.DirectionalLight(0xffffff, 1);
-  dir.position.set(3, 5, 2);
-  scene.add(dir);
+    mixer = new THREE.AnimationMixer(gltf.scene);
 
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
+    gltf.animations.forEach(clip => {
+      const action = mixer.clipAction(clip);
+      action.setLoop(THREE.LoopOnce);
+      action.clampWhenFinished = true;
+      actions[clip.name] = action;
+    });
 
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
-}
+    console.log('Loaded animations:', Object.keys(actions));
+    bindUI();
+  },
+  undefined,
+  (err) => console.error(err)
+);
 
-function loadModel() {
-  const loader = new GLTFLoader();
-
-  loader.load(
-    './toilet_web.glb',
-    (gltf) => {
-      scene.add(gltf.scene);
-
-      mixer = new THREE.AnimationMixer(gltf.scene);
-
-      gltf.animations.forEach(clip => {
-        const action = mixer.clipAction(clip);
-        action.setLoop(THREE.LoopOnce);
-        action.clampWhenFinished = true;
-        actions[clip.name] = action;
-      });
-
-      bindUI();
-      console.log('Animations loaded:', Object.keys(actions));
-    },
-    undefined,
-    (err) => console.error(err)
-  );
-}
-
+/* ---------- ANIMATION CONTROL ---------- */
 function playOnce(name) {
   if (!actions[name]) return;
   actions[name].reset();
@@ -145,8 +139,8 @@ function playOnce(name) {
 
 function bindUI() {
   document.getElementById('coverBtn').onclick = () => playOnce('CoverAction');
-  document.getElementById('seatBtn').onclick = () => playOnce('SeatAction');
-  document.getElementById('airBtn').onclick  = () => playOnce('AirventAction');
+  document.getElementById('seatBtn').onclick  = () => playOnce('SeatAction');
+  document.getElementById('airBtn').onclick   = () => playOnce('AirventAction');
 
   document.getElementById('bidetBtn').onclick = () => {
     playOnce('BidetCoverAction');
@@ -154,11 +148,13 @@ function bindUI() {
   };
 }
 
+/* ---------- RENDER LOOP ---------- */
 function animate() {
   requestAnimationFrame(animate);
   if (mixer) mixer.update(clock.getDelta());
   renderer.render(scene, camera);
 }
+animate();
 </script>
 
 </body>
