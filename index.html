@@ -32,13 +32,13 @@
       font-size: 14px;
       border: none;
       border-radius: 8px;
-      background: #2e2e2e; /* Grey */
+      background: #2e2e2e; /* Original Grey */
       color: white;
       cursor: pointer;
       transition: all 0.2s ease;
     }
     button:hover { background: #444; }
-    button.active { background: #4CAF50; } /* Green Toggle */
+    button.active { background: #4CAF50; } /* Original Green Toggle */
     
     #arButton {
       background: #ffffff;
@@ -96,6 +96,7 @@
   let mixer, actions = {};
   const states = { CoverAction: false, SeatAction: false, Bidet: false, AirventAction: false };
 
+  // FORCED CENTERING LOGIC
   loader.load(
     'https://cdn.jsdelivr.net/gh/khaled-ghareib/smart-toilet-ar@main/toilet_web.glb',
     (gltf) => {
@@ -125,6 +126,7 @@
     renderer.render(scene, camera);
   }
 
+  // REVERSE/FORWARD LOGIC
   function toggleAnim(name, open) {
     const action = actions[name];
     if (!action) return;
@@ -157,7 +159,8 @@
       } else if (key === 'CoverAction') {
         if (!states.CoverAction && states.SeatAction) {
           states.SeatAction = false;
-          document.getElementById('btn-SeatAction').classList.remove('active');
+          const seatBtn = document.getElementById('btn-SeatAction');
+          if(seatBtn) seatBtn.classList.remove('active');
           toggleAnim('SeatAction', false);
           setTimeout(() => toggleAnim('CoverAction', false), 500);
         } else {
@@ -169,28 +172,28 @@
     });
   });
 
-  // ROBUST AR TRIGGER
+  // AR TRIGGER LOGIC
   document.getElementById('arButton').addEventListener('click', () => {
-    const iosUrl = 'https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.usdz';
+    // We use the CDN link to improve loading speed and ensure correct headers
+    const iosUrl = 'https://cdn.jsdelivr.net/gh/khaled-ghareib/smart-toilet-ar@main/toilet_full_active.usdz';
     const androidUrl = 'https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.glb';
     
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
     if (isIOS) {
-      // Create a hidden link with an image child - mandatory for iOS AR Quick Look
       const anchor = document.createElement('a');
       anchor.setAttribute('rel', 'ar');
-      anchor.setAttribute('href', iosUrl);
+      // Adding #apple_pay_button=none can sometimes speed up Quick Look initialization
+      anchor.setAttribute('href', iosUrl + '#apple_pay_button=none');
       
       const img = document.createElement('img');
-      img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'; // Transparent pixel
+      img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
       anchor.appendChild(img);
       
       document.body.appendChild(anchor);
       anchor.click();
-      document.body.removeChild(anchor);
+      setTimeout(() => document.body.removeChild(anchor), 100);
     } else {
-      // Android Scene Viewer Intent
       const sceneViewerIntent = `intent://arvr.google.com/scene-viewer/1.0?file=${androidUrl}&mode=ar_only#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;S.browser_fallback_url=https://developers.google.com/ar;end;`;
       window.location.href = sceneViewerIntent;
     }
