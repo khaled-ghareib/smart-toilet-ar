@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Icon Smart Toilet</title>
+  
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
+
   <style>
     body {
       margin: 0;
@@ -19,6 +22,10 @@
     }
     h2 { margin: 15px 0; font-weight: 300; }
     #container { width: 100%; max-width: 800px; height: 70vh; background: #1a1a1a; cursor: grab; }
+    
+    /* Hidden Model-Viewer used only for AR triggering */
+    #ar-trigger { display: none; }
+
     .buttons {
       display: flex;
       gap: 12px;
@@ -45,17 +52,18 @@
       color: #000;
       font-weight: bold;
     }
-
-    /* This is the secret for Safari: A hidden but permanent AR link */
-    #safari-ar-link {
-      display: none;
-    }
   </style>
 </head>
 <body>
 
 <h2>Icon Smart Toilet</h2>
 <div id="container"></div>
+
+<model-viewer id="ar-trigger" 
+              src="https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.glb" 
+              ar ar-modes="webxr scene-viewer quick-look" 
+              ios-src="https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.usdz">
+</model-viewer>
 
 <div class="buttons">
   <button id="btn-CoverAction" data-action="CoverAction">Cover</button>
@@ -64,10 +72,6 @@
   <button id="btn-AirventAction" data-action="AirventAction">Air Vent</button>
   <button id="arButton">View in AR</button>
 </div>
-
-<a id="safari-ar-link" rel="ar" href="https://cdn.jsdelivr.net/gh/khaled-ghareib/smart-toilet-ar@main/toilet_full_active.usdz#apple_pay_button=none">
-  <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="AR">
-</a>
 
 <script type="importmap">
   {
@@ -179,20 +183,10 @@
     });
   });
 
-  // FINAL AR TRIGGER LOGIC
-  document.getElementById('arButton').addEventListener('click', (e) => {
-    const androidUrl = 'https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.glb';
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-
-    if (isIOS) {
-      // Safari requires a click on a real, existing DOM element for AR
-      const safariLink = document.getElementById('safari-ar-link');
-      safariLink.click();
-    } else {
-      // Android Scene Viewer Logic
-      const sceneViewerIntent = `intent://arvr.google.com/scene-viewer/1.0?file=${androidUrl}&mode=ar_only#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;S.browser_fallback_url=https://developers.google.com/ar;end;`;
-      window.location.href = sceneViewerIntent;
-    }
+  // UNIVERSAL AR TRIGGER
+  document.getElementById('arButton').addEventListener('click', () => {
+    const mv = document.getElementById('ar-trigger');
+    mv.activateAR();
   });
 
   window.addEventListener('resize', () => {
