@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Icon Smart Toilet</title>
   <style>
     body {
@@ -16,20 +17,21 @@
       min-height: 100vh;
     }
     h2 { margin: 10px 0; }
-    #container { width: 100%; max-width: 800px; height: 80vh; }
+    #container { width: 100%; max-width: 800px; height: 75vh; }
     .buttons {
       display: flex;
       gap: 12px;
       flex-wrap: wrap;
       justify-content: center;
       margin-top: 15px;
+      padding-bottom: 20px;
     }
     button {
       padding: 16px 24px;
       font-size: 16px;
       border: none;
       border-radius: 8px;
-      background: #4CAF50;
+      background: #4CAF50; /* Restored original green */
       color: white;
       cursor: pointer;
       transition: background 0.2s, transform 0.2s;
@@ -37,6 +39,13 @@
     button:hover {
       background: #2E7D32;
       transform: translateY(-2px);
+    }
+    /* Style for when a button is "Toggled Off" */
+    button.off {
+      background: #555;
+    }
+    #arButton {
+      background: #2196F3;
     }
   </style>
 </head>
@@ -46,10 +55,10 @@
 <div id="container"></div>
 
 <div class="buttons">
-  <button data-action="CoverAction">Cover</button>
-  <button data-action="SeatAction">Seat</button>
-  <button data-action="Bidet">Bidet</button>
-  <button data-action="AirventAction">Air Vent</button>
+  <button id="btn-CoverAction" data-action="CoverAction">Cover</button>
+  <button id="btn-SeatAction" data-action="SeatAction">Seat</button>
+  <button id="btn-Bidet" data-action="Bidet">Bidet</button>
+  <button id="btn-AirventAction" data-action="AirventAction">Air Vent</button>
   <button id="arButton">View in AR</button>
 </div>
 
@@ -67,18 +76,27 @@
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
   container.appendChild(renderer.domElement);
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+  const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5);
   light.position.set(0, 5, 0);
   scene.add(light);
 
   const loader = new GLTFLoader();
   let mixer;
   let actions = {};
+  
+  // Track the state of each component
+  const states = {
+    CoverAction: false,
+    SeatAction: false,
+    Bidet: false,
+    AirventAction: false
+  };
 
   loader.load(
     'https://cdn.jsdelivr.net/gh/khaled-ghareib/smart-toilet-ar@main/toilet_web.glb',
@@ -87,9 +105,10 @@
       mixer = new THREE.AnimationMixer(gltf.scene);
 
       gltf.animations.forEach((clip) => {
-        actions[clip.name] = mixer.clipAction(clip);
-        actions[clip.name].clampWhenFinished = true;
-        actions[clip.name].loop = THREE.LoopOnce;
+        const action = mixer.clipAction(clip);
+        action.setLoop(THREE.LoopOnce);
+        action.clampWhenFinished = true;
+        actions[clip.name] = action;
       });
 
       animate();
@@ -107,42 +126,85 @@
     renderer.render(scene, camera);
   }
 
-  // Animation buttons
-  const buttons = document.querySelectorAll('.buttons button[data-action]');
-  buttons.forEach(btn => {
+  // Helper to play animation forward or backward
+  function toggleAnim(actionName, shouldOpen) {
+    const action = actions[actionName];
+    if (!action) return;
+
+    action.paused = false;
+    if (shouldOpen) {
+      action.timeScale = 1;
+      action.play();
+    } else {
+      action.timeScale = -1;
+      // If the animation is at the very start, jump to the end to play backward
+      if (action.time === 0) action.time = action.getClip().duration;
+      action.play();
+    }
+  }
+
+  // Button Logic
+  document.querySelectorAll('.buttons button[data-action]').forEach(btn => {
     btn.addEventListener('click', () => {
       if (!mixer) return;
-      const actionName = btn.dataset.action;
+      const key = btn.dataset.action;
+      states[key] = !states[key]; // Toggle state
 
-      if (actionName === 'Bidet') {
-        if (actions['BidetCoverAction']) actions['BidetCoverAction'].reset().play();
-        setTimeout(() => {
-          if (actions['BidetAction']) actions['BidetAction'].reset().play();
-        }, 500);
-      } else {
-        if (actions[actionName]) actions[actionName].reset().play();
+      // Visual feedback: use 'off' class if state is false
+      btn.classList.toggle('off', !states[key]);
+
+      if (key === 'Bidet') {
+        if (states.Bidet) {
+          toggleAnim('BidetCoverAction', true);
+          setTimeout(() => toggleAnim('BidetAction', true), 500);
+        } else {
+          toggleAnim('BidetAction', false);
+          setTimeout(() => toggleAnim('BidetCoverAction', false), 500);
+        }
+      } 
+      else if (key === 'CoverAction') {
+        if (!states.CoverAction) {
+          // If closing Cover, check if Seat is open
+          if (states.SeatAction) {
+            states.SeatAction = false;
+            document.getElementById('btn-SeatAction').classList.add('off');
+            toggleAnim('SeatAction', false);
+            // Delay Cover closing so Seat goes first
+            setTimeout(() => toggleAnim('CoverAction', false), 500);
+          } else {
+            toggleAnim('CoverAction', false);
+          }
+        } else {
+          toggleAnim('CoverAction', true);
+        }
+      } 
+      else {
+        toggleAnim(key, states[key]);
       }
     });
   });
 
-  // AR button: iOS Quick Look / Android Scene Viewer
-  const arButton = document.getElementById('arButton');
-  arButton.addEventListener('click', () => {
-    const ua = navigator.userAgent.toLowerCase();
-    if (/iphone|ipad|ipod/.test(ua)) {
-      // iOS Quick Look
-      window.open(
-        'https://www.arviewer.io/viewer/?file=https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.usdz',
-        '_blank'
-      );
+  // Fixed AR Button
+  document.getElementById('arButton').addEventListener('click', () => {
+    const usdzUrl = 'https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.usdz';
+    
+    // Check if it's an iOS device
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+    if (isIOS) {
+      // Direct link trigger for iOS AR Quick Look
+      const anchor = document.createElement('a');
+      anchor.setAttribute('rel', 'ar');
+      anchor.setAttribute('href', usdzUrl);
+      const img = document.createElement('img'); // Required for some iOS triggers
+      anchor.appendChild(img);
+      anchor.click();
     } else {
-      // Android Scene Viewer
-      window.location.href =
-        'https://arvr.google.com/scene-viewer/1.0?file=https://cdn.jsdelivr.net/gh/khaled-ghareib/smart-toilet-ar@main/toilet_full_active.glb';
+      // Android/Desktop Fallback
+      alert("AR View is optimized for iOS (iPhone/iPad). On Android or Desktop, please use the 3D viewer above!");
     }
   });
 
-  // Handle resizing
   window.addEventListener('resize', () => {
     camera.aspect = container.clientWidth / container.clientHeight;
     camera.updateProjectionMatrix();
