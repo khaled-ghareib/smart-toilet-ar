@@ -32,13 +32,13 @@
       font-size: 14px;
       border: none;
       border-radius: 8px;
-      background: #2e2e2e; /* Original Grey */
+      background: #2e2e2e; /* Grey */
       color: white;
       cursor: pointer;
       transition: all 0.2s ease;
     }
     button:hover { background: #444; }
-    button.active { background: #4CAF50; } /* Original Green */
+    button.active { background: #4CAF50; } /* Green Toggle */
     
     #arButton {
       background: #ffffff;
@@ -78,9 +78,8 @@
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x111111);
 
-  // Camera adjusted for a centered 0,0,0 model
   const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
-  camera.position.set(0, 0.5, 1.5); // Closer and slightly elevated
+  camera.position.set(0, 0.8, 2); 
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(container.clientWidth, container.clientHeight);
@@ -89,22 +88,30 @@
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
-  controls.dampingFactor = 0.05;
-  controls.target.set(0, 0.4, 0); // Focus the rotation on the middle of the toilet
 
   const light = new THREE.HemisphereLight(0xffffff, 0x444444, 3);
   scene.add(light);
 
   const loader = new GLTFLoader();
-  let mixer;
-  let actions = {};
+  let mixer, actions = {};
   const states = { CoverAction: false, SeatAction: false, Bidet: false, AirventAction: false };
 
   loader.load(
     'https://cdn.jsdelivr.net/gh/khaled-ghareib/smart-toilet-ar@main/toilet_web.glb',
     (gltf) => {
-      scene.add(gltf.scene);
-      mixer = new THREE.AnimationMixer(gltf.scene);
+      const model = gltf.scene;
+      
+      // FORCED CENTERING LOGIC
+      const box = new THREE.Box3().setFromObject(model);
+      const center = box.getCenter(new THREE.Vector3());
+      model.position.sub(center); // Move model so its center is at 0,0,0
+      
+      scene.add(model);
+      
+      // Update controls to look at the new center
+      controls.target.set(0, 0, 0);
+      
+      mixer = new THREE.AnimationMixer(model);
       gltf.animations.forEach((clip) => {
         const action = mixer.clipAction(clip);
         action.setLoop(THREE.LoopOnce);
@@ -167,27 +174,23 @@
     });
   });
 
-  // AR Logic
+  // AR TRIGGER LOGIC
   document.getElementById('arButton').addEventListener('click', () => {
     const iosUrl = 'https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.usdz';
     const androidUrl = 'https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.glb';
     
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    const isAndroid = /Android/.test(navigator.userAgent);
 
     if (isIOS) {
-      const a = document.createElement('a');
-      a.rel = 'ar';
-      a.href = iosUrl;
-      const img = document.createElement('img');
-      a.appendChild(img);
-      a.click();
-    } else if (isAndroid) {
-      // Scene Viewer Intent
-      const sceneViewerUrl = `intent://arvr.google.com/scene-viewer/1.0?file=${androidUrl}&mode=ar_only#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;S.browser_fallback_url=https://developers.google.com/ar;end;`;
-      window.location.href = sceneViewerUrl;
+      // Apple Quick Look
+      const anchor = document.createElement('a');
+      anchor.setAttribute('rel', 'ar');
+      anchor.setAttribute('href', iosUrl);
+      anchor.click();
     } else {
-      alert("Please use a mobile device to view in AR.");
+      // Google Scene Viewer
+      const sceneViewerIntent = `intent://arvr.google.com/scene-viewer/1.0?file=${androidUrl}&mode=ar_only#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;S.browser_fallback_url=https://developers.google.com/ar;end;`;
+      window.location.href = sceneViewerIntent;
     }
   });
 
