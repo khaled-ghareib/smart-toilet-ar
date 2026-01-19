@@ -1,163 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Smart Toilet Viewer</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
+  <meta charset="UTF-8">
+  <title>Icon Smart Toilet</title>
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      font-family: Arial, sans-serif;
-      background: #000;
-    }
-
-    #ui {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 10px;
-      z-index: 10;
-    }
-
-    button {
-      padding: 10px 16px;
-      font-size: 14px;
-      border: none;
-      border-radius: 6px;
-      background: #ffffff;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background: #ddd;
-    }
+    body { margin:0; background:#111; color:white; font-family:sans-serif; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; }
+    model-viewer { width: 100%; max-width: 600px; height: 80vh; }
+    .buttons { display:flex; gap:10px; margin-top:10px; }
+    button { padding:10px 16px; border:none; border-radius:6px; background:#4CAF50; color:white; cursor:pointer; }
+    button:hover { background:#2E7D32; }
   </style>
 </head>
 <body>
 
-<div id="ui">
-  <button id="coverBtn">Cover</button>
-  <button id="seatBtn">Seat</button>
-  <button id="bidetBtn">Bidet</button>
-  <button id="airBtn">Air Vent</button>
+<h2>Icon Smart Toilet</h2>
+
+<model-viewer id="toiletViewer"
+  src="toilet_web.glb"
+  ar
+  ar-modes="quick-look scene-viewer"
+  camera-controls
+  auto-rotate
+  environment-image="neutral">
+</model-viewer>
+
+<div class="buttons">
+  <button data-animation="CoverAction">Cover</button>
+  <button data-animation="SeatAction">Seat</button>
+  <button data-animation="BidetCoverAction,BidetAction">Bidet</button>
+  <button data-animation="AirventAction">Air Vent</button>
 </div>
 
-<script type="module">
-  import * as THREE from 'https://unpkg.com/three@0.158.0/build/three.module.js';
-  import { GLTFLoader } from 'https://unpkg.com/three@0.158.0/examples/jsm/loaders/GLTFLoader.js';
-  import { OrbitControls } from 'https://unpkg.com/three@0.158.0/examples/jsm/controls/OrbitControls.js';
+<script>
+  const viewer = document.getElementById('toiletViewer');
+  const buttons = document.querySelectorAll('.buttons button');
 
-  // Scene
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xeeeeee);
-
-  // Camera
-  const camera = new THREE.PerspectiveCamera(
-    45,
-    window.innerWidth / window.innerHeight,
-    0.1,
-    100
-  );
-  camera.position.set(0, 1.5, 3);
-
-  // Renderer
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(window.devicePixelRatio);
-  document.body.appendChild(renderer.domElement);
-
-  // Controls
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(0, 0.8, 0);
-  controls.update();
-
-  // Lights
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.2));
-  const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-  dirLight.position.set(5, 10, 5);
-  scene.add(dirLight);
-
-  // Animation system
-  let mixer;
-  const actions = {};
-  const activeStates = {}; // track open/closed states
-
-  const loader = new GLTFLoader();
-  loader.load(
-    './toilet_web.glb',
-    (gltf) => {
-      const model = gltf.scene;
-      scene.add(model);
-
-      mixer = new THREE.AnimationMixer(model);
-
-      gltf.animations.forEach((clip) => {
-        const action = mixer.clipAction(clip);
-        action.loop = THREE.LoopOnce;
-        action.clampWhenFinished = true;
-        actions[clip.name] = action;
-        activeStates[clip.name] = false;
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const anims = btn.dataset.animation.split(',');
+      anims.forEach((anim, i) => {
+        setTimeout(() => {
+          viewer.playAnimation(anim);
+        }, i * 500); // 0.5s delay for chained animations like bidet
       });
-
-      console.log('Animations loaded:', Object.keys(actions));
-    },
-    undefined,
-    (error) => {
-      console.error('GLB load error:', error);
-    }
-  );
-
-  // Helper: play animation ONLY forward, never reset others
-  function playAction(name) {
-    const action = actions[name];
-    if (!action || activeStates[name]) return;
-
-    action.reset();
-    action.play();
-    activeStates[name] = true;
-  }
-
-  // Buttons
-  document.getElementById('coverBtn').onclick = () => {
-    playAction('CoverAction');
-  };
-
-  document.getElementById('seatBtn').onclick = () => {
-    playAction('SeatAction');
-  };
-
-  document.getElementById('airBtn').onclick = () => {
-    playAction('AirventAction');
-  };
-
-  document.getElementById('bidetBtn').onclick = () => {
-    if (!activeStates['BidetCoverAction']) {
-      playAction('BidetCoverAction');
-      setTimeout(() => {
-        playAction('BidetAction');
-      }, 500);
-    }
-  };
-
-  // Resize
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    });
   });
-
-  // Render loop
-  const clock = new THREE.Clock();
-  function animate() {
-    requestAnimationFrame(animate);
-    if (mixer) mixer.update(clock.getDelta());
-    renderer.render(scene, camera);
-  }
-  animate();
 </script>
 
 </body>
