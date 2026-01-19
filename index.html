@@ -35,14 +35,12 @@
   <button id="arButton">View in AR</button>
 </div>
 
-<!-- Three.js via CDN -->
 <script type="module">
   import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js';
   import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/loaders/GLTFLoader.js';
   import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/controls/OrbitControls.js';
 
   const container = document.getElementById('container');
-
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x111111);
 
@@ -64,19 +62,23 @@
   let mixer;
   let actions = {};
 
-  loader.load('toilet_web.glb', (gltf) => {
-    scene.add(gltf.scene);
+  loader.load(
+    'https://cdn.jsdelivr.net/gh/khaled-ghareib/smart-toilet-ar@main/toilet_web.glb',
+    (gltf) => {
+      scene.add(gltf.scene);
+      mixer = new THREE.AnimationMixer(gltf.scene);
 
-    mixer = new THREE.AnimationMixer(gltf.scene);
+      gltf.animations.forEach((clip) => {
+        actions[clip.name] = mixer.clipAction(clip);
+        actions[clip.name].clampWhenFinished = true; // freeze at last frame
+        actions[clip.name].loop = THREE.LoopOnce;    // play once
+      });
 
-    gltf.animations.forEach((clip) => {
-      actions[clip.name] = mixer.clipAction(clip);
-      actions[clip.name].clampWhenFinished = true; // stop at last frame
-      actions[clip.name].loop = THREE.LoopOnce;      // do not loop
-    });
-
-    animate();
-  });
+      animate();
+    },
+    undefined,
+    (err) => { console.error('Error loading GLB:', err); }
+  );
 
   const clock = new THREE.Clock();
 
@@ -87,17 +89,15 @@
     renderer.render(scene, camera);
   }
 
-  // Button logic
-  const buttons = document.querySelectorAll('.buttons button');
+  // Animation buttons
+  const buttons = document.querySelectorAll('.buttons button[data-action]');
   buttons.forEach(btn => {
-    const actionName = btn.dataset.action;
     btn.addEventListener('click', () => {
       if (!mixer) return;
+      const actionName = btn.dataset.action;
 
       if (actionName === 'Bidet') {
-        if (actions['BidetCoverAction']) {
-          actions['BidetCoverAction'].reset().play();
-        }
+        if (actions['BidetCoverAction']) actions['BidetCoverAction'].reset().play();
         setTimeout(() => {
           if (actions['BidetAction']) actions['BidetAction'].reset().play();
         }, 500);
@@ -107,10 +107,13 @@
     });
   });
 
-  // AR button opens your .usdz file in ARViewer
+  // AR button opens your USDZ in ARViewer
   const arButton = document.getElementById('arButton');
   arButton.addEventListener('click', () => {
-    window.open('https://www.arviewer.io/viewer/?file=https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.usdz', '_blank');
+    window.open(
+      'https://www.arviewer.io/viewer/?file=https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.usdz',
+      '_blank'
+    );
   });
 
   // Handle resizing
