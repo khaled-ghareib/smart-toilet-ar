@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Icon Smart Toilet | AR Experience</title>
+  <title>Icon Smart Toilet | Interactive AR</title>
   <style>
     body {
       margin: 0;
@@ -40,11 +40,13 @@
       transition: all 0.2s ease;
       box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     }
-    button:hover {
+    /* Active Toggle State Color */
+    button.active {
       background: #4CAF50;
       transform: translateY(-2px);
     }
-    button:active { transform: translateY(0); }
+    button:hover { background: #3d3d3d; }
+    button.active:hover { background: #43A047; }
 
     #arButton {
       background: #ffffff;
@@ -52,8 +54,6 @@
       font-weight: bold;
     }
     #arButton:hover { background: #e0e0e0; }
-
-    /* Hidden link for AR Quick Look */
     #ar-link { display: none; }
   </style>
 </head>
@@ -63,10 +63,10 @@
 <div id="container"></div>
 
 <div class="buttons">
-  <button data-action="CoverAction">Cover</button>
-  <button data-action="SeatAction">Seat</button>
-  <button data-action="Bidet">Bidet</button>
-  <button data-action="AirventAction">Air Vent</button>
+  <button id="btn-CoverAction" data-action="CoverAction">Cover</button>
+  <button id="btn-SeatAction" data-action="SeatAction">Seat</button>
+  <button id="btn-Bidet" data-action="Bidet">Bidet</button>
+  <button id="btn-AirventAction" data-action="AirventAction">Air Vent</button>
   <button id="arButton">View in AR</button>
 </div>
 
@@ -98,13 +98,11 @@
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(container.clientWidth, container.clientHeight);
-  renderer.toneMapping = THREE.ReinhardToneMapping;
   container.appendChild(renderer.domElement);
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  // Lighting
   const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
   scene.add(ambientLight);
   const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
@@ -114,14 +112,19 @@
   const loader = new GLTFLoader();
   let mixer;
   const actions = {};
+  const toggles = {
+    CoverAction: false,
+    SeatAction: false,
+    Bidet: false,
+    AirventAction: false
+  };
 
-  // Load Model
   loader.load(
     'https://cdn.jsdelivr.net/gh/khaled-ghareib/smart-toilet-ar@main/toilet_web.glb',
     (gltf) => {
       scene.add(gltf.scene);
       
-      // Auto-center the model
+      // Auto-center (Optional if you already centered in Blender)
       const box = new THREE.Box3().setFromObject(gltf.scene);
       const center = box.getCenter(new THREE.Vector3());
       gltf.scene.position.sub(center);
@@ -130,8 +133,8 @@
 
       gltf.animations.forEach((clip) => {
         const action = mixer.clipAction(clip);
-        action.setLoop(THREE.LoopOnce);      // Play once
-        action.clampWhenFinished = true;    // Stay at the end frame
+        action.setLoop(THREE.LoopOnce);
+        action.clampWhenFinished = true;
         actions[clip.name] = action;
       });
     }
@@ -146,39 +149,77 @@
   }
   animate();
 
+  // Unified function to handle toggle logic
+  function playToggleAnimation(name, forward) {
+    const action = actions[name];
+    if (!action) return;
+
+    action.paused = false;
+    if (forward) {
+      action.timeScale = 1; // Play forward
+      action.play();
+    } else {
+      action.timeScale = -1; // Play backward
+      // If action finished forward, we must set time to duration to play back
+      if (action.time === 0 && action.paused === false) action.time = action.getClip().duration;
+      action.play();
+    }
+  }
+
   // Button Listeners
   document.querySelectorAll('button[data-action]').forEach(btn => {
     btn.addEventListener('click', () => {
       if (!mixer) return;
-      const actionName = btn.dataset.action;
+      const actionKey = btn.dataset.action;
+      toggles[actionKey] = !toggles[actionKey];
 
-      if (actionName === 'Bidet') {
-        // Sequential animation: Cover then Wand
-        if (actions['BidetCoverAction']) actions['BidetCoverAction'].stop().play();
-        setTimeout(() => {
-          if (actions['BidetAction']) actions['BidetAction'].stop().play();
-        }, 500);
-      } else {
-        // Individual animation (Cover, Seat, or Vent)
-        if (actions[actionName]) {
-          actions[actionName].stop().play();
+      // Update UI Style
+      btn.classList.toggle('active', toggles[actionKey]);
+
+      if (actionKey === 'Bidet') {
+        if (toggles.Bidet) {
+          // OPEN: Cover then Wand
+          playToggleAnimation('BidetCoverAction', true);
+          setTimeout(() => playToggleAnimation('BidetAction', true), 500);
+        } else {
+          // CLOSE: Wand then Cover
+          playToggleAnimation('BidetAction', false);
+          setTimeout(() => playToggleAnimation('BidetCoverAction', false), 500);
         }
+      } 
+      else if (actionKey === 'CoverAction') {
+        if (!toggles.CoverAction) {
+          // If closing cover, check if seat is also open
+          if (toggles.SeatAction) {
+            toggles.SeatAction = false;
+            const seatBtn = document.getElementById('btn-SeatAction');
+            seatBtn.classList.remove('active');
+            playToggleAnimation('SeatAction', false);
+            
+            // Delay cover close by 0.5s so seat closes first
+            setTimeout(() => playToggleAnimation('CoverAction', false), 500);
+          } else {
+            playToggleAnimation('CoverAction', false);
+          }
+        } else {
+          playToggleAnimation('CoverAction', true);
+        }
+      }
+      else {
+        // Generic toggle for Seat or Air Vent
+        playToggleAnimation(actionKey, toggles[actionKey]);
       }
     });
   });
 
-  // Native AR Button Logic
+  // Native AR Button
   document.getElementById('arButton').addEventListener('click', (e) => {
     e.preventDefault();
-    const arLink = document.getElementById('ar-link');
-    
-    // Check if device supports AR Quick Look (iOS)
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    
     if (isIOS) {
-      arLink.click();
+      document.getElementById('ar-link').click();
     } else {
-      alert("AR Quick Look is only supported on iOS devices (iPhone/iPad). On desktop or Android, you can view the 3D model here!");
+      alert("AR Quick Look is for iOS. Use the web viewer on this device!");
     }
   });
 
