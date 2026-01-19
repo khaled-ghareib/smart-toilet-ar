@@ -59,10 +59,12 @@
 <h2>Icon Smart Toilet</h2>
 <div id="container"></div>
 
+<!-- Hidden model-viewer used only for AR -->
 <model-viewer id="ar-trigger" 
-              src="https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.glb" 
-              ar ar-modes="webxr scene-viewer quick-look"
-              ios-src="https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.glb">
+  src="https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.glb"
+  ios-src="https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.usdz"
+  ar
+  ar-modes="scene-viewer quick-look">
 </model-viewer>
 
 <div class="buttons">
@@ -74,12 +76,12 @@
 </div>
 
 <script type="importmap">
-  {
-    "imports": {
-      "three": "https://unpkg.com/three@0.158.0/build/three.module.js",
-      "three/addons/": "https://unpkg.com/three@0.158.0/examples/jsm/"
-    }
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.158.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.158.0/examples/jsm/"
   }
+}
 </script>
 
 <script type="module">
@@ -109,9 +111,9 @@
   let mixer, actions = {};
   const states = { CoverAction: false, SeatAction: false, Bidet: false, AirventAction: false };
 
-  // Load the web-optimized interactive model
+  // Load web-optimized interactive model (with animations)
   loader.load(
-    'https://cdn.jsdelivr.net/gh/khaled-ghareib/smart-toilet-ar@main/toilet_web.glb',
+    'https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_web.glb',
     (gltf) => {
       const model = gltf.scene;
       const box = new THREE.Box3().setFromObject(model);
@@ -153,6 +155,7 @@
     }
   }
 
+  // Animation buttons
   document.querySelectorAll('button[data-action]').forEach(btn => {
     btn.addEventListener('click', () => {
       if (!mixer) return;
@@ -168,26 +171,16 @@
           toggleAnim('BidetAction', false);
           setTimeout(() => toggleAnim('BidetCoverAction', false), 500);
         }
-      } else if (key === 'CoverAction') {
-        if (!states.CoverAction && states.SeatAction) {
-          states.SeatAction = false;
-          const seatBtn = document.getElementById('btn-SeatAction');
-          if(seatBtn) seatBtn.classList.remove('active');
-          toggleAnim('SeatAction', false);
-          setTimeout(() => toggleAnim('CoverAction', false), 500);
-        } else {
-          toggleAnim('CoverAction', states[key]);
-        }
       } else {
         toggleAnim(key, states[key]);
       }
     });
   });
 
-  // Universal Trigger Logic
+  // AR button
   document.getElementById('arButton').addEventListener('click', () => {
     const mv = document.getElementById('ar-trigger');
-    mv.activateAR(); // Automatically handles iOS (Quick Look) and Android (Scene Viewer)
+    mv.activateAR(); // Opens USDZ on iOS Quick Look, GLB on Android Scene Viewer
   });
 
   window.addEventListener('resize', () => {
