@@ -67,7 +67,7 @@
 
   <model-viewer
     id="toiletViewer"
-    src="https://pub-0426d526ef114881be492fff3021cec3.r2.dev/790f3b98-798d-4442-9113-86107e9c2ae4/1768809086069-toilet_full_active.glb"
+    src="toilet_web.glb"
     camera-controls
     auto-rotate
     environment-image="neutral"
@@ -80,25 +80,14 @@
     <button data-animation="AirventAction">Air Vent</button>
   </div>
 
-  <!-- Direct AR button using the same GLB -->
-  <model-viewer
-    id="arButton"
-    src="https://pub-0426d526ef114881be492fff3021cec3.r2.dev/790f3b98-798d-4442-9113-86107e9c2ae4/1768809086069-toilet_full_active.glb"
-    ios-src="https://pub-0426d526ef114881be492fff3021cec3.r2.dev/790f3b98-798d-4442-9113-86107e9c2ae4/1768809086069-toilet_full_active.usdz"
-    ar
-    ar-modes="quick-look scene-viewer"
-    style="display:none;"
-  ></model-viewer>
-
-  <button class="ar-button" onclick="document.getElementById('arButton').activateAR()">
+  <!-- AR button opens ARViewer webpage -->
+  <button class="ar-button" onclick="window.open('https://www.arviewer.io/view/0b08b77e-9fd8-473a-a65d-1ace5390b65b', '_blank')">
     View in AR
   </button>
 
   <script>
     const viewer = document.getElementById('toiletViewer');
     const buttons = document.querySelectorAll('.buttons button');
-
-    // Track currently playing animations
     const activeAnimations = new Set();
 
     buttons.forEach(btn => {
