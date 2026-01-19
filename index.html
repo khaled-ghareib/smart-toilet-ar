@@ -74,12 +74,10 @@
   ></model-viewer>
 
   <div class="buttons">
-    <button data-animation="toilet_closed" class="active">Closed</button>
-    <button data-animation="toilet_cover_open">Cover Only</button>
-    <button data-animation="toilet_cover_seat_open">Cover + Seat</button>
-    <button data-animation="toilet_bidet_ready">Bidet Lid</button>
-    <button data-animation="toilet_bidet_deployed">Bidet Deployed</button>
-    <button data-animation="toilet_full_active">Full Active</button>
+    <button data-animation="CoverAction" class="active">Cover</button>
+    <button data-animation="SeatAction">Seat</button>
+    <button data-animation="BidetActionGroup">Bidet</button>
+    <button data-animation="AirventAction">Air Vent</button>
   </div>
 
   <button class="ar-button" onclick="window.open('https://www.arviewer.io/view/0b08b77e-9fd8-473a-a65d-1ace5390b65b', '_blank')">
@@ -93,12 +91,26 @@
     buttons.forEach(btn => {
       btn.addEventListener('click', () => {
         const anim = btn.getAttribute('data-animation');
-        viewer.pause();
-        viewer.animationName = anim;
-        viewer.play();
 
+        // Remove active class from all buttons
         buttons.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+
+        // Special case for Bidet button
+        if(anim === "BidetActionGroup") {
+          viewer.pause();
+          viewer.animationName = "BidetCoverAction";
+          viewer.play();
+          setTimeout(() => {
+            viewer.pause();
+            viewer.animationName = "BidetAction";
+            viewer.play();
+          }, 500); // 0.5 seconds delay
+        } else {
+          viewer.pause();
+          viewer.animationName = anim;
+          viewer.play();
+        }
       });
     });
   </script>
