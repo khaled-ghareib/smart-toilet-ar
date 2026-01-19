@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Icon Smart Toilet</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.158.0/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/OrbitControls.js"></script>
+  
   <style>
     body {
       margin: 0;
@@ -17,35 +21,37 @@
       min-height: 100vh;
     }
     h2 { margin: 10px 0; }
-    #container { width: 100%; max-width: 800px; height: 75vh; }
+    #container { width: 100%; max-width: 800px; height: 70vh; background: #1a1a1a; }
     .buttons {
       display: flex;
       gap: 12px;
       flex-wrap: wrap;
       justify-content: center;
       margin-top: 15px;
-      padding-bottom: 20px;
+      padding: 10px;
     }
     button {
       padding: 16px 24px;
       font-size: 16px;
       border: none;
       border-radius: 8px;
-      background: #4CAF50; /* Restored original green */
+      background: #2e2e2e; /* Your preferred Grey */
       color: white;
       cursor: pointer;
       transition: background 0.2s, transform 0.2s;
     }
     button:hover {
-      background: #2E7D32;
+      background: #444;
       transform: translateY(-2px);
     }
-    /* Style for when a button is "Toggled Off" */
-    button.off {
-      background: #555;
+    /* When toggled ON, turn Green */
+    button.active {
+      background: #4CAF50;
     }
     #arButton {
-      background: #2196F3;
+      background: #ffffff;
+      color: #000;
+      font-weight: bold;
     }
   </style>
 </head>
@@ -62,154 +68,133 @@
   <button id="arButton">View in AR</button>
 </div>
 
-<script type="module">
-  import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js';
-  import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/loaders/GLTFLoader.js';
-  import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/controls/OrbitControls.js';
+<script>
+  // Wait for scripts to load
+  window.onload = function() {
+    const container = document.getElementById('container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x111111);
 
-  const container = document.getElementById('container');
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x111111);
+    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+    camera.position.set(2, 2, 3);
 
-  const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-  camera.position.set(2, 2, 3);
-
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(container.clientWidth, container.clientHeight);
-  renderer.setPixelRatio(window.devicePixelRatio);
-  container.appendChild(renderer.domElement);
-
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-
-  const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5);
-  light.position.set(0, 5, 0);
-  scene.add(light);
-
-  const loader = new GLTFLoader();
-  let mixer;
-  let actions = {};
-  
-  // Track the state of each component
-  const states = {
-    CoverAction: false,
-    SeatAction: false,
-    Bidet: false,
-    AirventAction: false
-  };
-
-  loader.load(
-    'https://cdn.jsdelivr.net/gh/khaled-ghareib/smart-toilet-ar@main/toilet_web.glb',
-    (gltf) => {
-      scene.add(gltf.scene);
-      mixer = new THREE.AnimationMixer(gltf.scene);
-
-      gltf.animations.forEach((clip) => {
-        const action = mixer.clipAction(clip);
-        action.setLoop(THREE.LoopOnce);
-        action.clampWhenFinished = true;
-        actions[clip.name] = action;
-      });
-
-      animate();
-    },
-    undefined,
-    (err) => { console.error('Error loading GLB:', err); }
-  );
-
-  const clock = new THREE.Clock();
-
-  function animate() {
-    requestAnimationFrame(animate);
-    if (mixer) mixer.update(clock.getDelta());
-    controls.update();
-    renderer.render(scene, camera);
-  }
-
-  // Helper to play animation forward or backward
-  function toggleAnim(actionName, shouldOpen) {
-    const action = actions[actionName];
-    if (!action) return;
-
-    action.paused = false;
-    if (shouldOpen) {
-      action.timeScale = 1;
-      action.play();
-    } else {
-      action.timeScale = -1;
-      // If the animation is at the very start, jump to the end to play backward
-      if (action.time === 0) action.time = action.getClip().duration;
-      action.play();
-    }
-  }
-
-  // Button Logic
-  document.querySelectorAll('.buttons button[data-action]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (!mixer) return;
-      const key = btn.dataset.action;
-      states[key] = !states[key]; // Toggle state
-
-      // Visual feedback: use 'off' class if state is false
-      btn.classList.toggle('off', !states[key]);
-
-      if (key === 'Bidet') {
-        if (states.Bidet) {
-          toggleAnim('BidetCoverAction', true);
-          setTimeout(() => toggleAnim('BidetAction', true), 500);
-        } else {
-          toggleAnim('BidetAction', false);
-          setTimeout(() => toggleAnim('BidetCoverAction', false), 500);
-        }
-      } 
-      else if (key === 'CoverAction') {
-        if (!states.CoverAction) {
-          // If closing Cover, check if Seat is open
-          if (states.SeatAction) {
-            states.SeatAction = false;
-            document.getElementById('btn-SeatAction').classList.add('off');
-            toggleAnim('SeatAction', false);
-            // Delay Cover closing so Seat goes first
-            setTimeout(() => toggleAnim('CoverAction', false), 500);
-          } else {
-            toggleAnim('CoverAction', false);
-          }
-        } else {
-          toggleAnim('CoverAction', true);
-        }
-      } 
-      else {
-        toggleAnim(key, states[key]);
-      }
-    });
-  });
-
-  // Fixed AR Button
-  document.getElementById('arButton').addEventListener('click', () => {
-    const usdzUrl = 'https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.usdz';
-    
-    // Check if it's an iOS device
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-
-    if (isIOS) {
-      // Direct link trigger for iOS AR Quick Look
-      const anchor = document.createElement('a');
-      anchor.setAttribute('rel', 'ar');
-      anchor.setAttribute('href', usdzUrl);
-      const img = document.createElement('img'); // Required for some iOS triggers
-      anchor.appendChild(img);
-      anchor.click();
-    } else {
-      // Android/Desktop Fallback
-      alert("AR View is optimized for iOS (iPhone/iPad). On Android or Desktop, please use the 3D viewer above!");
-    }
-  });
-
-  window.addEventListener('resize', () => {
-    camera.aspect = container.clientWidth / container.clientHeight;
-    camera.updateProjectionMatrix();
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(container.clientWidth, container.clientHeight);
-  });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+
+    const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.8);
+    scene.add(light);
+
+    const loader = new THREE.GLTFLoader();
+    let mixer;
+    let actions = {};
+    const states = { CoverAction: false, SeatAction: false, Bidet: false, AirventAction: false };
+
+    // Direct GitHub URL via jsDelivr to fix CORS/Loading issues
+    loader.load(
+      'https://cdn.jsdelivr.net/gh/khaled-ghareib/smart-toilet-ar@main/toilet_web.glb',
+      function(gltf) {
+        scene.add(gltf.scene);
+        mixer = new THREE.AnimationMixer(gltf.scene);
+
+        gltf.animations.forEach((clip) => {
+          const action = mixer.clipAction(clip);
+          action.setLoop(THREE.LoopOnce);
+          action.clampWhenFinished = true;
+          actions[clip.name] = action;
+        });
+
+        animate();
+      },
+      undefined,
+      function(err) { console.error('Model Load Error:', err); }
+    );
+
+    const clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      if (mixer) mixer.update(clock.getDelta());
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    function toggleAnim(name, open) {
+      const action = actions[name];
+      if (!action) return;
+      action.paused = false;
+      if (open) {
+        action.timeScale = 1;
+        action.play();
+      } else {
+        action.timeScale = -1;
+        if (action.time === 0) action.time = action.getClip().duration;
+        action.play();
+      }
+    }
+
+    document.querySelectorAll('button[data-action]').forEach(btn => {
+      btn.onclick = function() {
+        if (!mixer) return;
+        const key = this.dataset.action;
+        states[key] = !states[key];
+        this.classList.toggle('active', states[key]);
+
+        if (key === 'Bidet') {
+          if (states.Bidet) {
+            toggleAnim('BidetCoverAction', true);
+            setTimeout(() => toggleAnim('BidetAction', true), 500);
+          } else {
+            toggleAnim('BidetAction', false);
+            setTimeout(() => toggleAnim('BidetCoverAction', false), 500);
+          }
+        } 
+        else if (key === 'CoverAction') {
+          if (!states.CoverAction) {
+            if (states.SeatAction) {
+              states.SeatAction = false;
+              document.getElementById('btn-SeatAction').classList.remove('active');
+              toggleAnim('SeatAction', false);
+              setTimeout(() => toggleAnim('CoverAction', false), 500);
+            } else {
+              toggleAnim('CoverAction', false);
+            }
+          } else {
+            toggleAnim('CoverAction', true);
+          }
+        } 
+        else {
+          toggleAnim(key, states[key]);
+        }
+      };
+    });
+
+    // AR Button Logic
+    document.getElementById('arButton').onclick = function() {
+      const usdzUrl = 'https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.usdz';
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+      if (isIOS) {
+        const a = document.createElement('a');
+        a.setAttribute('rel', 'ar');
+        a.setAttribute('href', usdzUrl);
+        const img = document.createElement('img');
+        a.appendChild(img);
+        a.click();
+      } else {
+        alert("To view in AR, please use an iPhone or iPad. On this device, you can use the interactive 3D viewer above.");
+      }
+    };
+
+    window.onresize = function() {
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container.clientWidth, container.clientHeight);
+    };
+  };
 </script>
 
 </body>
