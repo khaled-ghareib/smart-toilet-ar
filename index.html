@@ -1,58 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Icon Smart Toilet</title>
-  <style>
-    body {
-      margin: 0;
-      background: #111;
-      color: white;
-      font-family: sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-    }
-    h2 { margin: 10px 0; }
-    #container { width: 100%; max-width: 800px; height: 80vh; }
-    .buttons {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      justify-content: center;
-      margin-top: 15px;
-    }
-    button {
-      padding: 16px 24px;
-      font-size: 16px;
-      border: none;
-      border-radius: 8px;
-      background: #4CAF50;
-      color: white;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.2s;
-    }
-    button:hover {
-      background: #2E7D32;
-      transform: translateY(-2px);
-    }
-  </style>
-</head>
-<body>
-
-<h2>Icon Smart Toilet</h2>
-<div id="container"></div>
-
-<div class="buttons">
-  <button data-action="CoverAction">Cover</button>
-  <button data-action="SeatAction">Seat</button>
-  <button data-action="Bidet">Bidet</button>
-  <button data-action="AirventAction">Air Vent</button>
-  <button id="arButton">View in AR</button>
-</div>
-
 <script type="module">
   import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js';
   import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/loaders/GLTFLoader.js';
@@ -72,7 +17,7 @@
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+  const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5);
   light.position.set(0, 5, 0);
   scene.add(light);
 
@@ -80,7 +25,6 @@
   let mixer;
   let actions = {};
 
-  // CORS-friendly raw URL from GitHub via jsDelivr
   loader.load(
     'https://cdn.jsdelivr.net/gh/khaled-ghareib/smart-toilet-ar@main/toilet_web.glb',
     (gltf) => {
@@ -88,9 +32,14 @@
       mixer = new THREE.AnimationMixer(gltf.scene);
 
       gltf.animations.forEach((clip) => {
-        actions[clip.name] = mixer.clipAction(clip);
-        actions[clip.name].clampWhenFinished = true; // freeze at last frame
-        actions[clip.name].loop = THREE.LoopOnce;    // play once
+        const action = mixer.clipAction(clip);
+        
+        // GLOBAL SETTINGS FOR ALL ANIMATIONS
+        action.setLoop(THREE.LoopOnce);      // Play once, no infinite looping
+        action.clampWhenFinished = true;    // Stay at the last frame
+        action.enabled = true;              // Keep the action active in the mixer
+        
+        actions[clip.name] = action;
       });
 
       animate();
@@ -108,7 +57,7 @@
     renderer.render(scene, camera);
   }
 
-  // Animation buttons
+  // Animation logic
   const buttons = document.querySelectorAll('.buttons button[data-action]');
   buttons.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -116,17 +65,32 @@
       const actionName = btn.dataset.action;
 
       if (actionName === 'Bidet') {
-        if (actions['BidetCoverAction']) actions['BidetCoverAction'].reset().play();
+        // Play Bidet Cover first
+        if (actions['BidetCoverAction']) {
+            actions['BidetCoverAction'].stop(); // Reset to start if clicked again
+            actions['BidetCoverAction'].play();
+        }
+        
+        // Delay Bidet Wand movement by 0.5s
         setTimeout(() => {
-          if (actions['BidetAction']) actions['BidetAction'].reset().play();
+          if (actions['BidetAction']) {
+            actions['BidetAction'].stop();
+            actions['BidetAction'].play();
+          }
         }, 500);
+
       } else {
-        if (actions[actionName]) actions[actionName].reset().play();
+        // General logic for Cover, Seat, and AirVent
+        if (actions[actionName]) {
+          // .stop() is used instead of .reset() here to allow 
+          // a clean replay from the start if the user clicks again.
+          actions[actionName].stop().play();
+        }
       }
     });
   });
 
-  // AR button opens your USDZ in ARViewer
+  // AR button
   const arButton = document.getElementById('arButton');
   arButton.addEventListener('click', () => {
     window.open(
@@ -135,13 +99,9 @@
     );
   });
 
-  // Handle resizing
   window.addEventListener('resize', () => {
     camera.aspect = container.clientWidth / container.clientHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(container.clientWidth, container.clientHeight);
   });
 </script>
-
-</body>
-</html>
