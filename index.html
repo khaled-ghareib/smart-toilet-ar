@@ -13,7 +13,6 @@
       height: 100%;
       display: flex;
       flex-direction: column;
-      justify-content: flex-start;
       align-items: center;
       background: #111;
       color: white;
@@ -28,6 +27,38 @@
       max-width: 800px;
       height: 80vh;
     }
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 20px;
+    }
+    .buttons button {
+      padding: 12px 18px;
+      font-size: 14px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      background: #4CAF50;
+      color: white;
+      transition: all 0.2s;
+    }
+    .buttons button.active { background: #2E7D32; }
+    .buttons button:hover { transform: translateY(-2px); }
+
+    .ar-button {
+      margin-top: 20px;
+      padding: 14px 24px;
+      font-size: 16px;
+      border-radius: 12px;
+      background: #2196F3;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .ar-button:hover { transform: translateY(-2px); }
   </style>
 </head>
 <body>
@@ -36,14 +67,41 @@
 
   <model-viewer
     id="toiletViewer"
-    src="toilet_web.glb" 
-    ios-src="https://www.arviewer.io/view/toilet_full_active.glb" 
-    ar
-    ar-modes="quick-look scene-viewer"
+    src="toilet_web.glb"
     camera-controls
     auto-rotate
-    environment-image="neutral">
-  </model-viewer>
+    environment-image="neutral"
+  ></model-viewer>
+
+  <div class="buttons">
+    <button data-animation="toilet_closed" class="active">Closed</button>
+    <button data-animation="toilet_cover_open">Cover Only</button>
+    <button data-animation="toilet_cover_seat_open">Cover + Seat</button>
+    <button data-animation="toilet_bidet_ready">Bidet Lid</button>
+    <button data-animation="toilet_bidet_deployed">Bidet Deployed</button>
+    <button data-animation="toilet_full_active">Full Active</button>
+  </div>
+
+  <button class="ar-button" onclick="window.open('https://www.arviewer.io/view/0b08b77e-9fd8-473a-a65d-1ace5390b65b', '_blank')">
+    View in AR
+  </button>
+
+  <script>
+    const viewer = document.getElementById('toiletViewer');
+    const buttons = document.querySelectorAll('.buttons button');
+
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const anim = btn.getAttribute('data-animation');
+        viewer.pause();
+        viewer.animationName = anim;
+        viewer.play();
+
+        buttons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+  </script>
 
 </body>
 </html>
