@@ -2,13 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Icon Smart Toilet</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Icon Smart Toilet | AR Experience</title>
   <style>
     body {
       margin: 0;
       background: #111;
       color: white;
-      font-family: sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -16,28 +17,44 @@
       min-height: 100vh;
       overflow: hidden;
     }
-    h2 { margin: 10px 0; z-index: 10; }
-    #container { width: 100vw; height: 70vh; background: #1a1a1a; }
+    h2 { margin: 15px 0; font-weight: 300; letter-spacing: 1px; }
+    #container { width: 100vw; height: 65vh; cursor: grab; }
+    #container:active { cursor: grabbing; }
+
     .buttons {
       display: flex;
-      gap: 10px;
+      gap: 12px;
       flex-wrap: wrap;
       justify-content: center;
       padding: 20px;
-      z-index: 10;
+      max-width: 600px;
     }
     button {
-      padding: 12px 20px;
+      padding: 14px 22px;
       font-size: 14px;
       border: none;
-      border-radius: 5px;
-      background: #4CAF50;
+      border-radius: 12px;
+      background: #2e2e2e;
       color: white;
       cursor: pointer;
-      transition: 0.3s;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     }
-    button:hover { background: #388E3C; }
-    #arButton { background: #2196F3; }
+    button:hover {
+      background: #4CAF50;
+      transform: translateY(-2px);
+    }
+    button:active { transform: translateY(0); }
+
+    #arButton {
+      background: #ffffff;
+      color: #000;
+      font-weight: bold;
+    }
+    #arButton:hover { background: #e0e0e0; }
+
+    /* Hidden link for AR Quick Look */
+    #ar-link { display: none; }
   </style>
 </head>
 <body>
@@ -52,6 +69,10 @@
   <button data-action="AirventAction">Air Vent</button>
   <button id="arButton">View in AR</button>
 </div>
+
+<a id="ar-link" rel="ar" href="https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.usdz">
+  <img src="https://developer.apple.com/augmented-reality/quick-look/models/teapot/teapot_2x.png" alt="AR">
+</a>
 
 <script type="importmap">
   {
@@ -72,89 +93,93 @@
   scene.background = new THREE.Color(0x111111);
 
   const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-  camera.position.set(1.5, 1.5, 2.5);
+  camera.position.set(1.8, 1.2, 2.5);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.toneMapping = THREE.ReinhardToneMapping;
   container.appendChild(renderer.domElement);
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
   // Lighting
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+  const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
   scene.add(ambientLight);
-  const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-  dirLight.position.set(5, 5, 5);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+  dirLight.position.set(5, 10, 7.5);
   scene.add(dirLight);
 
   const loader = new GLTFLoader();
   let mixer;
   const actions = {};
 
-  // Using jsDelivr to avoid GitHub CORS issues
-  const modelUrl = 'https://cdn.jsdelivr.net/gh/khaled-ghareib/smart-toilet-ar@main/toilet_web.glb';
+  // Load Model
+  loader.load(
+    'https://cdn.jsdelivr.net/gh/khaled-ghareib/smart-toilet-ar@main/toilet_web.glb',
+    (gltf) => {
+      scene.add(gltf.scene);
+      
+      // Auto-center the model
+      const box = new THREE.Box3().setFromObject(gltf.scene);
+      const center = box.getCenter(new THREE.Vector3());
+      gltf.scene.position.sub(center);
 
-  loader.load(modelUrl, (gltf) => {
-    scene.add(gltf.scene);
-    
-    // Center the model
-    const box = new THREE.Box3().setFromObject(gltf.scene);
-    const center = box.getCenter(new THREE.Vector3());
-    gltf.scene.position.sub(center);
+      mixer = new THREE.AnimationMixer(gltf.scene);
 
-    mixer = new THREE.AnimationMixer(gltf.scene);
-
-    gltf.animations.forEach((clip) => {
-      const action = mixer.clipAction(clip);
-      action.setLoop(THREE.LoopOnce);
-      action.clampWhenFinished = true;
-      actions[clip.name] = action;
-    });
-
-    console.log("Animations loaded:", Object.keys(actions));
-  }, 
-  (xhr) => { console.log((xhr.loaded / xhr.total * 100) + '% loaded'); },
-  (error) => { console.error('Error loading GLB:', error); });
+      gltf.animations.forEach((clip) => {
+        const action = mixer.clipAction(clip);
+        action.setLoop(THREE.LoopOnce);      // Play once
+        action.clampWhenFinished = true;    // Stay at the end frame
+        actions[clip.name] = action;
+      });
+    }
+  );
 
   const clock = new THREE.Clock();
   function animate() {
     requestAnimationFrame(animate);
-    const delta = clock.getDelta();
-    if (mixer) mixer.update(delta);
+    if (mixer) mixer.update(clock.getDelta());
     controls.update();
     renderer.render(scene, camera);
   }
   animate();
 
-  // Animation logic
+  // Button Listeners
   document.querySelectorAll('button[data-action]').forEach(btn => {
     btn.addEventListener('click', () => {
       if (!mixer) return;
       const actionName = btn.dataset.action;
 
       if (actionName === 'Bidet') {
-        // Run sequence
-        if (actions['BidetCoverAction']) actions['BidetCoverAction'].reset().play();
+        // Sequential animation: Cover then Wand
+        if (actions['BidetCoverAction']) actions['BidetCoverAction'].stop().play();
         setTimeout(() => {
-          if (actions['BidetAction']) actions['BidetAction'].reset().play();
+          if (actions['BidetAction']) actions['BidetAction'].stop().play();
         }, 500);
       } else {
-        // Run individual
+        // Individual animation (Cover, Seat, or Vent)
         if (actions[actionName]) {
-          actions[actionName].reset().play();
-        } else {
-          console.warn(`Action ${actionName} not found in model.`);
+          actions[actionName].stop().play();
         }
       }
     });
   });
 
-  // AR Logic
-  document.getElementById('arButton').addEventListener('click', () => {
-    const usdzUrl = 'https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.usdz';
-    window.open(`https://www.arviewer.io/viewer/?file=${encodeURIComponent(usdzUrl)}`, '_blank');
+  // Native AR Button Logic
+  document.getElementById('arButton').addEventListener('click', (e) => {
+    e.preventDefault();
+    const arLink = document.getElementById('ar-link');
+    
+    // Check if device supports AR Quick Look (iOS)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    
+    if (isIOS) {
+      arLink.click();
+    } else {
+      alert("AR Quick Look is only supported on iOS devices (iPhone/iPad). On desktop or Android, you can view the 3D model here!");
+    }
   });
 
   window.addEventListener('resize', () => {
@@ -163,5 +188,6 @@
     renderer.setSize(container.clientWidth, container.clientHeight);
   });
 </script>
+
 </body>
 </html>
