@@ -1,102 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Icon Smart Toilet</title>
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: white;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    h2 { margin: 10px 0; z-index: 10; }
+    #container { width: 100vw; height: 70vh; background: #1a1a1a; }
+    .buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 20px;
+      z-index: 10;
+    }
+    button {
+      padding: 12px 20px;
+      font-size: 14px;
+      border: none;
+      border-radius: 5px;
+      background: #4CAF50;
+      color: white;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover { background: #388E3C; }
+    #arButton { background: #2196F3; }
+  </style>
+</head>
+<body>
+
+<h2>Icon Smart Toilet</h2>
+<div id="container"></div>
+
+<div class="buttons">
+  <button data-action="CoverAction">Cover</button>
+  <button data-action="SeatAction">Seat</button>
+  <button data-action="Bidet">Bidet</button>
+  <button data-action="AirventAction">Air Vent</button>
+  <button id="arButton">View in AR</button>
+</div>
+
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.158.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.158.0/examples/jsm/"
+    }
+  }
+</script>
+
 <script type="module">
-  import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js';
-  import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/loaders/GLTFLoader.js';
-  import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/controls/OrbitControls.js';
+  import * as THREE from 'three';
+  import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
   const container = document.getElementById('container');
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x111111);
 
   const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-  camera.position.set(2, 2, 3);
+  camera.position.set(1.5, 1.5, 2.5);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(container.clientWidth, container.clientHeight);
   container.appendChild(renderer.domElement);
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5);
-  light.position.set(0, 5, 0);
-  scene.add(light);
+  // Lighting
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+  scene.add(ambientLight);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+  dirLight.position.set(5, 5, 5);
+  scene.add(dirLight);
 
   const loader = new GLTFLoader();
   let mixer;
-  let actions = {};
+  const actions = {};
 
-  loader.load(
-    'https://cdn.jsdelivr.net/gh/khaled-ghareib/smart-toilet-ar@main/toilet_web.glb',
-    (gltf) => {
-      scene.add(gltf.scene);
-      mixer = new THREE.AnimationMixer(gltf.scene);
+  // Using jsDelivr to avoid GitHub CORS issues
+  const modelUrl = 'https://cdn.jsdelivr.net/gh/khaled-ghareib/smart-toilet-ar@main/toilet_web.glb';
 
-      gltf.animations.forEach((clip) => {
-        const action = mixer.clipAction(clip);
-        
-        // GLOBAL SETTINGS FOR ALL ANIMATIONS
-        action.setLoop(THREE.LoopOnce);      // Play once, no infinite looping
-        action.clampWhenFinished = true;    // Stay at the last frame
-        action.enabled = true;              // Keep the action active in the mixer
-        
-        actions[clip.name] = action;
-      });
+  loader.load(modelUrl, (gltf) => {
+    scene.add(gltf.scene);
+    
+    // Center the model
+    const box = new THREE.Box3().setFromObject(gltf.scene);
+    const center = box.getCenter(new THREE.Vector3());
+    gltf.scene.position.sub(center);
 
-      animate();
-    },
-    undefined,
-    (err) => { console.error('Error loading GLB:', err); }
-  );
+    mixer = new THREE.AnimationMixer(gltf.scene);
+
+    gltf.animations.forEach((clip) => {
+      const action = mixer.clipAction(clip);
+      action.setLoop(THREE.LoopOnce);
+      action.clampWhenFinished = true;
+      actions[clip.name] = action;
+    });
+
+    console.log("Animations loaded:", Object.keys(actions));
+  }, 
+  (xhr) => { console.log((xhr.loaded / xhr.total * 100) + '% loaded'); },
+  (error) => { console.error('Error loading GLB:', error); });
 
   const clock = new THREE.Clock();
-
   function animate() {
     requestAnimationFrame(animate);
-    if (mixer) mixer.update(clock.getDelta());
+    const delta = clock.getDelta();
+    if (mixer) mixer.update(delta);
     controls.update();
     renderer.render(scene, camera);
   }
+  animate();
 
   // Animation logic
-  const buttons = document.querySelectorAll('.buttons button[data-action]');
-  buttons.forEach(btn => {
+  document.querySelectorAll('button[data-action]').forEach(btn => {
     btn.addEventListener('click', () => {
       if (!mixer) return;
       const actionName = btn.dataset.action;
 
       if (actionName === 'Bidet') {
-        // Play Bidet Cover first
-        if (actions['BidetCoverAction']) {
-            actions['BidetCoverAction'].stop(); // Reset to start if clicked again
-            actions['BidetCoverAction'].play();
-        }
-        
-        // Delay Bidet Wand movement by 0.5s
+        // Run sequence
+        if (actions['BidetCoverAction']) actions['BidetCoverAction'].reset().play();
         setTimeout(() => {
-          if (actions['BidetAction']) {
-            actions['BidetAction'].stop();
-            actions['BidetAction'].play();
-          }
+          if (actions['BidetAction']) actions['BidetAction'].reset().play();
         }, 500);
-
       } else {
-        // General logic for Cover, Seat, and AirVent
+        // Run individual
         if (actions[actionName]) {
-          // .stop() is used instead of .reset() here to allow 
-          // a clean replay from the start if the user clicks again.
-          actions[actionName].stop().play();
+          actions[actionName].reset().play();
+        } else {
+          console.warn(`Action ${actionName} not found in model.`);
         }
       }
     });
   });
 
-  // AR button
-  const arButton = document.getElementById('arButton');
-  arButton.addEventListener('click', () => {
-    window.open(
-      'https://www.arviewer.io/viewer/?file=https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.usdz',
-      '_blank'
-    );
+  // AR Logic
+  document.getElementById('arButton').addEventListener('click', () => {
+    const usdzUrl = 'https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.usdz';
+    window.open(`https://www.arviewer.io/viewer/?file=${encodeURIComponent(usdzUrl)}`, '_blank');
   });
 
   window.addEventListener('resize', () => {
@@ -105,3 +163,5 @@
     renderer.setSize(container.clientWidth, container.clientHeight);
   });
 </script>
+</body>
+</html>
