@@ -1,160 +1,163 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>Icon Smart Toilet</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8" />
+  <title>Smart Toilet Viewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<style>
-  body {
-    margin: 0;
-    overflow: hidden;
-    background: #111;
-    font-family: Arial, sans-serif;
-  }
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background: #000;
+    }
 
-  #title {
-    position: absolute;
-    top: 15px;
-    width: 100%;
-    text-align: center;
-    color: white;
-    font-size: 24px;
-    z-index: 10;
-  }
+    #ui {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      z-index: 10;
+    }
 
-  #buttons {
-    position: absolute;
-    bottom: 20px;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    z-index: 10;
-  }
+    button {
+      padding: 10px 16px;
+      font-size: 14px;
+      border: none;
+      border-radius: 6px;
+      background: #ffffff;
+      cursor: pointer;
+    }
 
-  button, a {
-    padding: 10px 16px;
-    font-size: 14px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    background: #eee;
-    color: #000;
-    text-decoration: none;
-  }
-
-  #arBtn {
-    background: #00c853;
-    font-weight: bold;
-  }
-</style>
+    button:hover {
+      background: #ddd;
+    }
+  </style>
 </head>
-
 <body>
 
-<div id="title">Icon Smart Toilet</div>
-
-<div id="buttons">
+<div id="ui">
   <button id="coverBtn">Cover</button>
   <button id="seatBtn">Seat</button>
   <button id="bidetBtn">Bidet</button>
   <button id="airBtn">Air Vent</button>
-
-  <a
-    id="arBtn"
-    href="https://www.arviewer.io/view/0b08b77e-9fd8-473a-a65d-1ace5390b65b"
-    target="_blank"
-  >
-    View in AR
-  </a>
 </div>
 
 <script type="module">
-/* ✅ CORRECT CDN IMPORTS (GITHUB PAGES SAFE) */
-import * as THREE from 'https://unpkg.com/three@0.158.0/build/three.module.js';
-import { GLTFLoader } from 'https://unpkg.com/three@0.158.0/examples/jsm/loaders/GLTFLoader.js';
-import { OrbitControls } from 'https://unpkg.com/three@0.158.0/examples/jsm/controls/OrbitControls.js';
+  import * as THREE from 'https://unpkg.com/three@0.158.0/build/three.module.js';
+  import { GLTFLoader } from 'https://unpkg.com/three@0.158.0/examples/jsm/loaders/GLTFLoader.js';
+  import { OrbitControls } from 'https://unpkg.com/three@0.158.0/examples/jsm/controls/OrbitControls.js';
 
-let scene, camera, renderer, mixer;
-let actions = {};
-const clock = new THREE.Clock();
+  // Scene
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xeeeeee);
 
-/* ---------- INIT ---------- */
-scene = new THREE.Scene();
-scene.background = new THREE.Color(0x111111);
+  // Camera
+  const camera = new THREE.PerspectiveCamera(
+    45,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    100
+  );
+  camera.position.set(0, 1.5, 3);
 
-camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(0, 1.5, 3);
-
-renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
-
-scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.2));
-
-const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-dirLight.position.set(3, 5, 2);
-scene.add(dirLight);
-
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
+  // Renderer
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
-});
+  renderer.setPixelRatio(window.devicePixelRatio);
+  document.body.appendChild(renderer.domElement);
 
-/* ---------- LOAD MODEL ---------- */
-const loader = new GLTFLoader();
-loader.load(
-  './toilet_web.glb',
-  (gltf) => {
-    scene.add(gltf.scene);
+  // Controls
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.target.set(0, 0.8, 0);
+  controls.update();
 
-    mixer = new THREE.AnimationMixer(gltf.scene);
+  // Lights
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.2));
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+  dirLight.position.set(5, 10, 5);
+  scene.add(dirLight);
 
-    gltf.animations.forEach(clip => {
-      const action = mixer.clipAction(clip);
-      action.setLoop(THREE.LoopOnce);
-      action.clampWhenFinished = true;
-      actions[clip.name] = action;
-    });
+  // Animation system
+  let mixer;
+  const actions = {};
+  const activeStates = {}; // track open/closed states
 
-    console.log('Loaded animations:', Object.keys(actions));
-    bindUI();
-  },
-  undefined,
-  (err) => console.error(err)
-);
+  const loader = new GLTFLoader();
+  loader.load(
+    './toilet_web.glb',
+    (gltf) => {
+      const model = gltf.scene;
+      scene.add(model);
 
-/* ---------- ANIMATION CONTROL ---------- */
-function playOnce(name) {
-  if (!actions[name]) return;
-  actions[name].reset();
-  actions[name].play();
-}
+      mixer = new THREE.AnimationMixer(model);
 
-function bindUI() {
-  document.getElementById('coverBtn').onclick = () => playOnce('CoverAction');
-  document.getElementById('seatBtn').onclick  = () => playOnce('SeatAction');
-  document.getElementById('airBtn').onclick   = () => playOnce('AirventAction');
+      gltf.animations.forEach((clip) => {
+        const action = mixer.clipAction(clip);
+        action.loop = THREE.LoopOnce;
+        action.clampWhenFinished = true;
+        actions[clip.name] = action;
+        activeStates[clip.name] = false;
+      });
+
+      console.log('Animations loaded:', Object.keys(actions));
+    },
+    undefined,
+    (error) => {
+      console.error('GLB load error:', error);
+    }
+  );
+
+  // Helper: play animation ONLY forward, never reset others
+  function playAction(name) {
+    const action = actions[name];
+    if (!action || activeStates[name]) return;
+
+    action.reset();
+    action.play();
+    activeStates[name] = true;
+  }
+
+  // Buttons
+  document.getElementById('coverBtn').onclick = () => {
+    playAction('CoverAction');
+  };
+
+  document.getElementById('seatBtn').onclick = () => {
+    playAction('SeatAction');
+  };
+
+  document.getElementById('airBtn').onclick = () => {
+    playAction('AirventAction');
+  };
 
   document.getElementById('bidetBtn').onclick = () => {
-    playOnce('BidetCoverAction');
-    setTimeout(() => playOnce('BidetAction'), 500);
+    if (!activeStates['BidetCoverAction']) {
+      playAction('BidetCoverAction');
+      setTimeout(() => {
+        playAction('BidetAction');
+      }, 500);
+    }
   };
-}
 
-/* ---------- RENDER LOOP ---------- */
-function animate() {
-  requestAnimationFrame(animate);
-  if (mixer) mixer.update(clock.getDelta());
-  renderer.render(scene, camera);
-}
-animate();
+  // Resize
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // Render loop
+  const clock = new THREE.Clock();
+  function animate() {
+    requestAnimationFrame(animate);
+    if (mixer) mixer.update(clock.getDelta());
+    renderer.render(scene, camera);
+  }
+  animate();
 </script>
 
 </body>
