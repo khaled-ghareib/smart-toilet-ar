@@ -100,15 +100,10 @@
     'https://cdn.jsdelivr.net/gh/khaled-ghareib/smart-toilet-ar@main/toilet_web.glb',
     (gltf) => {
       const model = gltf.scene;
-      
-      // FORCED CENTERING LOGIC
       const box = new THREE.Box3().setFromObject(model);
       const center = box.getCenter(new THREE.Vector3());
-      model.position.sub(center); // Move model so its center is at 0,0,0
-      
+      model.position.sub(center); 
       scene.add(model);
-      
-      // Update controls to look at the new center
       controls.target.set(0, 0, 0);
       
       mixer = new THREE.AnimationMixer(model);
@@ -174,7 +169,7 @@
     });
   });
 
-  // AR TRIGGER LOGIC
+  // ROBUST AR TRIGGER
   document.getElementById('arButton').addEventListener('click', () => {
     const iosUrl = 'https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.usdz';
     const androidUrl = 'https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.glb';
@@ -182,13 +177,20 @@
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
     if (isIOS) {
-      // Apple Quick Look
+      // Create a hidden link with an image child - mandatory for iOS AR Quick Look
       const anchor = document.createElement('a');
       anchor.setAttribute('rel', 'ar');
       anchor.setAttribute('href', iosUrl);
+      
+      const img = document.createElement('img');
+      img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'; // Transparent pixel
+      anchor.appendChild(img);
+      
+      document.body.appendChild(anchor);
       anchor.click();
+      document.body.removeChild(anchor);
     } else {
-      // Google Scene Viewer
+      // Android Scene Viewer Intent
       const sceneViewerIntent = `intent://arvr.google.com/scene-viewer/1.0?file=${androidUrl}&mode=ar_only#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;S.browser_fallback_url=https://developers.google.com/ar;end;`;
       window.location.href = sceneViewerIntent;
     }
