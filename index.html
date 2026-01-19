@@ -1,117 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smart Toilet AR Showcase</title>
-<script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-<style>
-  body, html {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    background: #111;
-    color: white;
-    font-family: sans-serif;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-  }
-  model-viewer {
-    width: 100%;
-    max-width: 600px;
-    height: 80vh;
-  }
-  .buttons {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 12px;
-    margin-top: 20px;
-  }
-  button {
-    padding: 12px 18px;
-    font-size: 14px;
-    border-radius: 10px;
-    border: none;
-    cursor: pointer;
-    background: #4CAF50;
-    color: white;
-    transition: all 0.2s;
-  }
-  button.active { background: #2E7D32; }
-  button:hover { transform: translateY(-2px); }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Icon Smart Toilet</title>
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+      background: #111;
+      color: white;
+      font-family: sans-serif;
+    }
+    h1 {
+      margin: 16px 0;
+      text-align: center;
+    }
+    model-viewer {
+      width: 100%;
+      max-width: 800px;
+      height: 80vh;
+    }
+  </style>
 </head>
 <body>
 
-<model-viewer id="toiletViewer"
-  src="https://khaled-ghareib.github.io/smart-toilet-ar/toilet_closed.glb"
-  ios-src="https://khaled-ghareib.github.io/smart-toilet-ar/toilet_closed.usdz"
-  ar
-  ar-modes="quick-look scene-viewer"
-  camera-controls
-  auto-rotate
-  environment-image="neutral">
-</model-viewer>
+  <h1>Icon Smart Toilet</h1>
 
-<div class="buttons">
-  <button data-pose="toilet_closed" class="active">Closed</button>
-  <button data-pose="toilet_cover_open">Cover Only</button>
-  <button data-pose="toilet_cover_seat_open">Cover + Seat</button>
-  <button data-pose="toilet_bidet_ready">Bidet Lid</button>
-  <button data-pose="toilet_bidet_deployed">Bidet Deployed</button>
-  <button data-pose="toilet_full_active">Full Active</button>
-</div>
-
-<script>
-  const viewer = document.getElementById('toiletViewer');
-  const buttons = document.querySelectorAll('.buttons button');
-  let currentPose = 'toilet_closed';
-
-  const poses = {
-    toilet_closed: { 
-      glb: 'https://khaled-ghareib.github.io/smart-toilet-ar/toilet_closed.glb',
-      usdz: 'https://khaled-ghareib.github.io/smart-toilet-ar/toilet_closed.usdz'
-    },
-    toilet_cover_open: { 
-      glb: 'https://khaled-ghareib.github.io/smart-toilet-ar/toilet_cover_open.glb',
-      usdz: 'https://khaled-ghareib.github.io/smart-toilet-ar/toilet_cover_open.usdz'
-    },
-    toilet_cover_seat_open: { 
-      glb: 'https://khaled-ghareib.github.io/smart-toilet-ar/toilet_cover_seat_open.glb',
-      usdz: 'https://khaled-ghareib.github.io/smart-toilet-ar/toilet_cover_seat_open.usdz'
-    },
-    toilet_bidet_ready: { 
-      glb: 'https://khaled-ghareib.github.io/smart-toilet-ar/toilet_bidet_ready.glb',
-      usdz: 'https://khaled-ghareib.github.io/smart-toilet-ar/toilet_bidet_ready.usdz'
-    },
-    toilet_bidet_deployed: { 
-      glb: 'https://khaled-ghareib.github.io/smart-toilet-ar/toilet_bidet_deployed.glb',
-      usdz: 'https://khaled-ghareib.github.io/smart-toilet-ar/toilet_bidet_deployed.usdz'
-    },
-    toilet_full_active: { 
-      glb: 'https://khaled-ghareib.github.io/smart-toilet-ar/toilet_full_active.glb',
-      usdz: 'https://khaled-ghareib.github.io/smart-toilet-ar/toilet_full_active.usdz'
-    }
-  };
-
-  buttons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const poseName = btn.getAttribute('data-pose');
-      if (poseName === currentPose) return;
-      currentPose = poseName;
-
-      viewer.src = poses[poseName].glb;
-      viewer.iosSrc = poses[poseName].usdz;
-
-      buttons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-    });
-  });
-</script>
+  <model-viewer
+    id="toiletViewer"
+    src="toilet_web.glb" 
+    ios-src="https://www.arviewer.io/view/toilet_full_active.glb" 
+    ar
+    ar-modes="quick-look scene-viewer"
+    camera-controls
+    auto-rotate
+    environment-image="neutral">
+  </model-viewer>
 
 </body>
 </html>
