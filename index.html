@@ -2,8 +2,21 @@
   const viewer = document.getElementById('toiletViewer');
   const buttons = document.querySelectorAll('.buttons button');
 
-  // Keep track of which animations are currently applied
+  // Track which animations have been played (and are "open")
   const activeAnimations = new Set();
+
+  // Play a single animation once
+  function playAnimationOnce(name) {
+    viewer.animationName = name;
+    viewer.play();
+    
+    // Listen for finish to mark it as active
+    const onFinish = () => {
+      activeAnimations.add(name);
+      viewer.removeEventListener('finish', onFinish);
+    };
+    viewer.addEventListener('finish', onFinish);
+  }
 
   buttons.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -13,35 +26,17 @@
       buttons.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
 
-      // If Bidet, play both animations in sequence
+      // Bidet plays two animations in sequence
       if(anim === "BidetActionGroup") {
-        if(!activeAnimations.has("BidetCoverAction")) {
-          activeAnimations.add("BidetCoverAction");
-          viewer.animationName = "BidetCoverAction";
-          viewer.play({ loop: false });
-        }
+        if(!activeAnimations.has("BidetCoverAction")) playAnimationOnce("BidetCoverAction");
         setTimeout(() => {
-          if(!activeAnimations.has("BidetAction")) {
-            activeAnimations.add("BidetAction");
-            viewer.animationName = "BidetAction";
-            viewer.play({ loop: false });
-          }
+          if(!activeAnimations.has("BidetAction")) playAnimationOnce("BidetAction");
         }, 500);
         return;
       }
 
-      // Only play animation if it’s not already active
-      if(!activeAnimations.has(anim)) {
-        activeAnimations.add(anim);
-        viewer.animationName = anim;
-        viewer.play({ loop: false });
-      }
+      // Normal animations: only play if not already active
+      if(!activeAnimations.has(anim)) playAnimationOnce(anim);
     });
-  });
-
-  // Optional: remove animations from active set when they finish
-  viewer.addEventListener('finish', (event) => {
-    const name = viewer.animationName;
-    if(name) activeAnimations.add(name); // keep it active visually, or remove if you want
   });
 </script>
