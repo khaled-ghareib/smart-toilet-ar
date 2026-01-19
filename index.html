@@ -5,11 +5,48 @@
   <title>Icon Smart Toilet</title>
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
-    body { margin:0; background:#111; color:white; font-family:sans-serif; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; }
-    model-viewer { width: 100%; max-width: 600px; height: 80vh; }
-    .buttons { display:flex; gap:10px; margin-top:10px; }
-    button { padding:10px 16px; border:none; border-radius:6px; background:#4CAF50; color:white; cursor:pointer; }
-    button:hover { background:#2E7D32; }
+    body {
+      margin:0;
+      background:#111;
+      color:white;
+      font-family:sans-serif;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      height:100vh;
+    }
+
+    h2 {
+      margin: 10px 0;
+    }
+
+    model-viewer {
+      width: 100%;
+      max-width: 600px;
+      height: 80vh;
+    }
+
+    .buttons {
+      display:flex;
+      gap:10px;
+      margin-top:10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    button {
+      padding:10px 16px;
+      border:none;
+      border-radius:6px;
+      background:#4CAF50;
+      color:white;
+      cursor:pointer;
+    }
+
+    button:hover {
+      background:#2E7D32;
+    }
   </style>
 </head>
 <body>
@@ -22,29 +59,67 @@
   ar-modes="quick-look scene-viewer"
   camera-controls
   auto-rotate
-  environment-image="neutral">
+  environment-image="neutral"
+  autoplay>
 </model-viewer>
 
 <div class="buttons">
-  <button data-animation="CoverAction">Cover</button>
-  <button data-animation="SeatAction">Seat</button>
-  <button data-animation="BidetCoverAction,BidetAction">Bidet</button>
-  <button data-animation="AirventAction">Air Vent</button>
+  <button data-action="CoverAction">Cover</button>
+  <button data-action="SeatAction">Seat</button>
+  <button data-action="Bidet">Bidet</button>
+  <button data-action="AirventAction">Air Vent</button>
+  <button id="arButton">View in AR</button>
 </div>
 
 <script>
   const viewer = document.getElementById('toiletViewer');
   const buttons = document.querySelectorAll('.buttons button');
+  const arButton = document.getElementById('arButton');
+
+  // Map animations by index for simplicity (model must have animations in the right order)
+  const animationIndices = {
+    CoverAction: 0,
+    SeatAction: 1,
+    BidetCoverAction: 2,
+    BidetAction: 3,
+    AirventAction: 4
+  };
+
+  let played = {};
 
   buttons.forEach(btn => {
+    const action = btn.dataset.action;
+
+    if (!action) return;
+
     btn.addEventListener('click', () => {
-      const anims = btn.dataset.animation.split(',');
-      anims.forEach((anim, i) => {
-        setTimeout(() => {
-          viewer.playAnimation(anim);
-        }, i * 500); // 0.5s delay for chained animations like bidet
-      });
+      // Bidet chains two animations
+      if (action === "Bidet") {
+        if (!played.BidetCoverAction) {
+          viewer.animationName = undefined; // reset
+          viewer.playAnimation(animationIndices.BidetCoverAction);
+          played.BidetCoverAction = true;
+          setTimeout(() => {
+            if (!played.BidetAction) {
+              viewer.playAnimation(animationIndices.BidetAction);
+              played.BidetAction = true;
+            }
+          }, 500);
+        }
+      } else {
+        // Normal animations
+        if (!played[action]) {
+          viewer.animationName = undefined; // reset
+          viewer.playAnimation(animationIndices[action]);
+          played[action] = true;
+        }
+      }
     });
+  });
+
+  // AR button goes to ARViewer
+  arButton.addEventListener('click', () => {
+    window.open('https://www.arviewer.io/view/0b08b77e-9fd8-473a-a65d-1ace5390b65b', '_blank');
   });
 </script>
 
