@@ -3,64 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <title>Icon Smart Toilet</title>
-  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
     body {
-      margin:0;
-      background:#111;
-      color:white;
-      font-family:sans-serif;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:center;
-      min-height:100vh;
-    }
-
-    h2 {
-      margin: 10px 0;
-    }
-
-    model-viewer {
-      width: 100%;
-      max-width: 600px;
-      height: 80vh;
-    }
-
-    .buttons {
-      display:flex;
-      gap:10px;
-      margin-top:10px;
-      flex-wrap: wrap;
+      margin: 0;
+      background: #111;
+      color: white;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       justify-content: center;
+      min-height: 100vh;
     }
-
-    button {
-      padding:10px 16px;
-      border:none;
-      border-radius:6px;
-      background:#4CAF50;
-      color:white;
-      cursor:pointer;
-    }
-
-    button:hover {
-      background:#2E7D32;
-    }
+    h2 { margin: 10px 0; }
+    #container { width: 100%; max-width: 600px; height: 80vh; }
+    .buttons { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
+    button { padding: 10px 16px; border: none; border-radius: 6px; background: #4CAF50; color: white; cursor: pointer; }
+    button:hover { background: #2E7D32; }
   </style>
 </head>
 <body>
 
 <h2>Icon Smart Toilet</h2>
-
-<!-- Web model with animations -->
-<model-viewer id="toiletViewer"
-  src="toilet_web.glb"
-  camera-controls
-  auto-rotate
-  environment-image="neutral"
-  autoplay>
-</model-viewer>
+<div id="container"></div>
 
 <div class="buttons">
   <button data-action="CoverAction">Cover</button>
@@ -70,57 +35,89 @@
   <button id="arButton">View in AR</button>
 </div>
 
-<script>
-  const viewer = document.getElementById('toiletViewer');
+<!-- Three.js via CDN -->
+<script type="module">
+  import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js';
+  import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/loaders/GLTFLoader.js';
+  import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/controls/OrbitControls.js';
+
+  const container = document.getElementById('container');
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x111111);
+
+  const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+  camera.position.set(2, 2, 3);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  container.appendChild(renderer.domElement);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+
+  const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+  light.position.set(0, 5, 0);
+  scene.add(light);
+
+  const loader = new GLTFLoader();
+  let mixer;
+  let actions = {};
+
+  loader.load('toilet_web.glb', (gltf) => {
+    scene.add(gltf.scene);
+
+    mixer = new THREE.AnimationMixer(gltf.scene);
+
+    gltf.animations.forEach((clip) => {
+      actions[clip.name] = mixer.clipAction(clip);
+      actions[clip.name].clampWhenFinished = true; // stop at last frame
+      actions[clip.name].loop = THREE.LoopOnce;      // do not loop
+    });
+
+    animate();
+  });
+
+  const clock = new THREE.Clock();
+
+  function animate() {
+    requestAnimationFrame(animate);
+    if (mixer) mixer.update(clock.getDelta());
+    controls.update();
+    renderer.render(scene, camera);
+  }
+
+  // Button logic
   const buttons = document.querySelectorAll('.buttons button');
-  const arButton = document.getElementById('arButton');
-
-  // Animation index mapping (update if your GLB has different order)
-  const animationIndices = {
-    CoverAction: 0,
-    SeatAction: 1,
-    BidetCoverAction: 2,
-    BidetAction: 3,
-    AirventAction: 4
-  };
-
-  // Track which animations have played
-  let played = {};
-
   buttons.forEach(btn => {
-    const action = btn.dataset.action;
-
-    if (!action) return;
-
+    const actionName = btn.dataset.action;
     btn.addEventListener('click', () => {
-      // Bidet chains two animations
-      if (action === "Bidet") {
-        if (!played.BidetCoverAction) {
-          viewer.animationName = undefined;
-          viewer.playAnimation(animationIndices.BidetCoverAction);
-          played.BidetCoverAction = true;
-          setTimeout(() => {
-            if (!played.BidetAction) {
-              viewer.playAnimation(animationIndices.BidetAction);
-              played.BidetAction = true;
-            }
-          }, 500);
+      if (!mixer) return;
+
+      if (actionName === 'Bidet') {
+        if (actions['BidetCoverAction']) {
+          actions['BidetCoverAction'].reset().play();
         }
+        setTimeout(() => {
+          if (actions['BidetAction']) actions['BidetAction'].reset().play();
+        }, 500);
       } else {
-        // Normal animations
-        if (!played[action]) {
-          viewer.animationName = undefined;
-          viewer.playAnimation(animationIndices[action]);
-          played[action] = true;
-        }
+        if (actions[actionName]) actions[actionName].reset().play();
       }
     });
   });
 
-  // AR button opens the new .usdz file in ARViewer
+  // AR button opens your .usdz file in ARViewer
+  const arButton = document.getElementById('arButton');
   arButton.addEventListener('click', () => {
-    // Link to your ARViewer page with the new USDZ
     window.open('https://www.arviewer.io/viewer/?file=https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.usdz', '_blank');
+  });
+
+  // Handle resizing
+  window.addEventListener('resize', () => {
+    camera.aspect = container.clientWidth / container.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(container.clientWidth, container.clientHeight);
   });
 </script>
 
