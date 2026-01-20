@@ -23,13 +23,12 @@
     h2 { margin: 15px 0; font-weight: 300; }
     #container { width: 100%; max-width: 800px; height: 70vh; background: #1a1a1a; cursor: grab; }
     
-    /* Hidden trigger for AR mode */
     #ar-trigger { display: none; }
 
     .buttons {
       display: flex;
       gap: 12px;
-      flex-wrap: wrap;
+      flex-wrap: nowrap; /* ✅ ONLY CHANGE */
       justify-content: center;
       margin-top: 20px;
       padding: 10px;
@@ -44,22 +43,16 @@
       color: white;
       cursor: pointer;
       transition: all 0.2s ease;
+      white-space: nowrap;
     }
 
     button:hover { background: #444; }
     button.active { background: #4CAF50; }
     
-    /* 🔽 ONLY NEW CHANGE: AR button smaller + top-right */
     #arButton {
       background: #ffffff;
       color: #000;
       font-weight: bold;
-      padding: 8px 12px;
-      font-size: 12px;
-      position: fixed;
-      top: 16px;
-      right: 16px;
-      z-index: 1000;
     }
   </style>
 </head>
@@ -68,7 +61,6 @@
 <h2>Icon Smart Toilet</h2>
 <div id="container"></div>
 
-<!-- Hidden model-viewer used only for AR -->
 <model-viewer id="ar-trigger" 
   src="https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.glb"
   ios-src="https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.usdz"
