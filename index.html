@@ -20,17 +20,32 @@
       min-height: 100vh;
       overflow: hidden;
     }
-    h2 { margin: 15px 0; font-weight: 300; }
-    #container { width: 100%; max-width: 800px; height: 70vh; background: #1a1a1a; cursor: grab; }
+
+    /* 🔽 ONLY CHANGE #1: make title bold */
+    h2 { 
+      margin: 15px 0; 
+      font-weight: 600; 
+    }
+
+    #container { 
+      width: 100%; 
+      max-width: 800px; 
+      height: 70vh; 
+      background: #1a1a1a; 
+      cursor: grab; 
+    }
     
     #ar-trigger { display: none; }
 
     .buttons {
       display: flex;
       gap: 12px;
-      flex-wrap: nowrap; /* ✅ ONLY CHANGE */
+      flex-wrap: nowrap;
       justify-content: center;
-      margin-top: 20px;
+
+      /* 🔽 ONLY CHANGE #2: move buttons slightly up */
+      margin-top: 8px;
+
       padding: 10px;
     }
 
