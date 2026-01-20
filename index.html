@@ -21,7 +21,6 @@
       overflow: hidden;
     }
 
-    /* 🔽 ONLY CHANGE #1: make title bold */
     h2 { 
       margin: 15px 0; 
       font-weight: 600; 
@@ -42,10 +41,7 @@
       gap: 12px;
       flex-wrap: nowrap;
       justify-content: center;
-
-      /* 🔽 ONLY CHANGE #2: move buttons slightly up */
       margin-top: 8px;
-
       padding: 10px;
     }
 
@@ -74,6 +70,16 @@
 <body>
 
 <h2>Icon Smart Toilet</h2>
+
+<!-- ✅ MOVED HERE: buttons now directly under title -->
+<div class="buttons">
+  <button id="btn-CoverAction" data-action="CoverAction">Cover</button>
+  <button id="btn-SeatAction" data-action="SeatAction">Seat</button>
+  <button id="btn-Bidet" data-action="Bidet">Bidet</button>
+  <button id="btn-AirventAction" data-action="AirventAction">Air Vent</button>
+  <button id="arButton">View in AR</button>
+</div>
+
 <div id="container"></div>
 
 <model-viewer id="ar-trigger" 
@@ -82,14 +88,6 @@
   ar
   ar-modes="scene-viewer quick-look">
 </model-viewer>
-
-<div class="buttons">
-  <button id="btn-CoverAction" data-action="CoverAction">Cover</button>
-  <button id="btn-SeatAction" data-action="SeatAction">Seat</button>
-  <button id="btn-Bidet" data-action="Bidet">Bidet</button>
-  <button id="btn-AirventAction" data-action="AirventAction">Air Vent</button>
-  <button id="arButton">View in AR</button>
-</div>
 
 <script type="importmap">
 {
