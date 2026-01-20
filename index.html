@@ -34,18 +34,21 @@
       margin-top: 20px;
       padding: 10px;
     }
+
+    /* 🔽 ONLY CHANGE IS HERE (smaller buttons) */
     button {
-      padding: 16px 24px;
-      font-size: 14px;
+      padding: 12px 18px;
+      font-size: 13px;
       border: none;
       border-radius: 8px;
-      background: #2e2e2e; /* Grey */
+      background: #2e2e2e;
       color: white;
       cursor: pointer;
       transition: all 0.2s ease;
     }
+
     button:hover { background: #444; }
-    button.active { background: #4CAF50; } /* Green */
+    button.active { background: #4CAF50; }
     
     #arButton {
       background: #ffffff;
@@ -180,7 +183,7 @@
   // AR button
   document.getElementById('arButton').addEventListener('click', () => {
     const mv = document.getElementById('ar-trigger');
-    mv.activateAR(); // Opens USDZ on iOS Quick Look, GLB on Android Scene Viewer
+    mv.activateAR();
   });
 
   window.addEventListener('resize', () => {
