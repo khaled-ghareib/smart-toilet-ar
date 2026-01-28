@@ -7,11 +7,13 @@
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
   <style>
     body { margin: 0; background: rgba(20, 48, 86); color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow: hidden; }
+    h2 { margin: 15px 0; font-weight: 600; }
     
-    /* Logo styling */
+    #container { width: 100%; max-width: 800px; height: 70vh; background: #1a1a1a; cursor: grab; border-radius: 12px; overflow: hidden; }
+    
+    /* Logo styling - moved below model */
     .logo { margin: 15px 0; max-width: 200px; height: auto; }
 
-    #container { width: 100%; max-width: 800px; height: 70vh; background: #1a1a1a; cursor: grab; border-radius: 12px; overflow: hidden; }
     #ar-trigger { display: none; }
     .buttons { 
       display: grid; 
@@ -30,7 +32,7 @@
 </head>
 <body>
 
-<img src="https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/smart_toilet_logo.png" alt="Icon Smart Toilet Logo" class="logo">
+<h2>Icon Smart Toilet</h2>
 
 <div class="buttons">
   <button id="btn-CoverAction" data-action="CoverAction">Cover</button>
@@ -42,6 +44,8 @@
 </div>
 
 <div id="container"></div>
+
+<img src="https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/smart_toilet_logo.png" alt="Icon Smart Toilet Logo" class="logo">
 
 <model-viewer id="ar-trigger" 
   src="https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_web.glb"
