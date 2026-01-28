@@ -71,20 +71,20 @@
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  // HIGH-THRESHOLD BLOOM: Threshold 0.9 ignores all normal reflections
+  // SOFT BLOOM: Strength lowered to 0.4 to prevent blinding
   const renderScene = new RenderPass(scene, camera);
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(container.clientWidth, container.clientHeight), 
-    1.5,  // Strength
-    0.4,  // Radius
-    0.9   // Threshold: Extremely high to keep the toilet "dark" until LED is ON
+    0.4,  // Strength: VASTLY lowered from previous blinding versions
+    0.3,  // Radius: Tighter glow
+    0.2   // Threshold: Balanced to catch the blue without catching the toilet white
   );
 
   const composer = new EffectComposer(renderer);
   composer.addPass(renderScene);
   composer.addPass(bloomPass);
 
-  const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0); 
+  const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2); 
   scene.add(light);
 
   const loader = new GLTFLoader();
@@ -97,9 +97,6 @@
       const model = gltf.scene;
       model.traverse((child) => {
         if (child.isMesh) {
-          // Force all meshes to start with 0 emission
-          if(child.material) child.material.emissiveIntensity = 0;
-
           if (child.name === "LED_Bulb") { 
             ledMesh = child;
             ledMesh.material = new THREE.MeshStandardMaterial({
@@ -107,6 +104,8 @@
               emissive: new THREE.Color(0x000000),
               emissiveIntensity: 0
             });
+          } else if(child.material) {
+            child.material.emissiveIntensity = 0; // Global safety
           }
         }
       });
@@ -138,9 +137,9 @@
     if (name === "LED_OnAction.003") {
       if (ledMesh) {
         if (open) {
-          // ULTRA BRIGHT: Scalar 200 to break the 0.9 threshold gate
-          ledMesh.material.emissive.setHex(0x00aaff).multiplyScalar(200); 
-          ledMesh.material.emissiveIntensity = 200; 
+          // SOFT INTENSITY: Scalar of 10 is the "sweet spot" for this threshold
+          ledMesh.material.emissive.setHex(0x00aaff).multiplyScalar(10); 
+          ledMesh.material.emissiveIntensity = 10; 
         } else {
           ledMesh.material.emissive.setHex(0x000000); 
           ledMesh.material.emissiveIntensity = 0;
