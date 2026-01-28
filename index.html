@@ -163,20 +163,23 @@
   function toggleAnim(name, open) {
     const action = actions[name];
     if (!action) return;
+
     action.paused = false;
+
     if (open) {
+      action.reset();
       action.timeScale = 1;
       action.play();
     } else {
-      action.timeScale = -1;
-      if (action.time === 0) action.time = action.getClip().duration;
-      action.play();
+      action.stop();
+      action.reset();
     }
   }
 
   document.querySelectorAll('button[data-action]').forEach(btn => {
     btn.addEventListener('click', () => {
       if (!mixer) return;
+
       const key = btn.dataset.action;
       states[key] = !states[key];
       btn.classList.toggle('active', states[key]);
@@ -189,15 +192,18 @@
           toggleAnim('BidetAction', false);
           setTimeout(() => toggleAnim('BidetCoverAction', false), 500);
         }
-      } else {
+      } 
+      else if (key === 'LED_OnAction') {
+        toggleAnim('LED_OnAction', states.LED_OnAction);
+      } 
+      else {
         toggleAnim(key, states[key]);
       }
     });
   });
 
   document.getElementById('arButton').addEventListener('click', () => {
-    const mv = document.getElementById('ar-trigger');
-    mv.activateAR();
+    document.getElementById('ar-trigger').activateAR();
   });
 
   window.addEventListener('resize', () => {
