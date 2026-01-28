@@ -65,16 +65,17 @@
 
   const container = document.getElementById('container');
   const scene = new THREE.Scene();
-  // Removed scene.background to allow CSS background transparency
+  
+  // Set the background color to match rgba(20, 48, 86) exactly
+  scene.background = new THREE.Color(20/255, 48/255, 86/255);
 
   const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
   camera.position.set(0, 0.8, 2); 
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); // Alpha enabled for transparency
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.toneMapping = THREE.ReinhardToneMapping; 
-  renderer.setClearColor(0x000000, 0); // Sets clear alpha to 0 (fully transparent)
   container.appendChild(renderer.domElement);
 
   const controls = new OrbitControls(camera, renderer.domElement);
