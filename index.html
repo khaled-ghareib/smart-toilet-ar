@@ -76,7 +76,7 @@
   <button id="btn-SeatAction" data-action="SeatAction">Seat</button>
   <button id="btn-Bidet" data-action="Bidet">Bidet</button>
   <button id="btn-AirventAction" data-action="AirventAction">Air Vent</button>
-  <button id="btn-LED" data-action="LED_OnAction">LED</button>
+  <button id="btn-LED" data-action="LED_OnAction.003">LED</button>
   <button id="arButton">View in AR</button>
 </div>
 
@@ -128,7 +128,7 @@
     SeatAction: false, 
     Bidet: false, 
     AirventAction: false,
-    LED_OnAction: false
+    "LED_OnAction.003": false
   };
 
   loader.load(
@@ -193,8 +193,8 @@
           setTimeout(() => toggleAnim('BidetCoverAction', false), 500);
         }
       } 
-      else if (key === 'LED_OnAction') {
-        toggleAnim('LED_OnAction', states.LED_OnAction);
+      else if (key === 'LED_OnAction.003') {
+        toggleAnim('LED_OnAction.003', states["LED_OnAction.003"]);
       } 
       else {
         toggleAnim(key, states[key]);
