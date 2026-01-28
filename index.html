@@ -4,50 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Icon Smart Toilet</title>
-  
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
-
   <style>
-    body {
-      margin: 0;
-      background: #111;
-      color: white;
-      font-family: sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      overflow: hidden;
-    }
+    body { margin: 0; background: #111; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow: hidden; }
     h2 { margin: 15px 0; font-weight: 600; }
-    #container { 
-      width: 100%; 
-      max-width: 800px; 
-      height: 70vh; 
-      background: #1a1a1a; 
-      cursor: grab; 
-    }
+    #container { width: 100%; max-width: 800px; height: 70vh; background: #1a1a1a; cursor: grab; }
     #ar-trigger { display: none; }
-    .buttons {
-      display: flex;
-      gap: 12px;
-      flex-wrap: nowrap;
-      justify-content: center;
-      margin-top: 8px;
-      padding: 10px;
-    }
-    button {
-      padding: 12px 18px;
-      font-size: 13px;
-      border: none;
-      border-radius: 8px;
-      background: #2e2e2e;
-      color: white;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      white-space: nowrap;
-    }
+    .buttons { display: flex; gap: 12px; flex-wrap: nowrap; justify-content: center; margin-top: 8px; padding: 10px; }
+    button { padding: 12px 18px; font-size: 13px; border: none; border-radius: 8px; background: #2e2e2e; color: white; cursor: pointer; transition: all 0.2s ease; white-space: nowrap; }
     button:hover { background: #444; }
     button.active { background: #4CAF50; }
     #arButton { background: #ffffff; color: #000; font-weight: bold; }
@@ -71,8 +35,7 @@
 <model-viewer id="ar-trigger" 
   src="https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.glb"
   ios-src="https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.usdz"
-  ar
-  ar-modes="scene-viewer quick-look">
+  ar ar-modes="scene-viewer quick-look">
 </model-viewer>
 
 <script type="importmap">
@@ -108,31 +71,25 @@
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  // BALANCED BLOOM SETTINGS
+  // HIGH-THRESHOLD BLOOM: Threshold 0.9 ignores all normal reflections
   const renderScene = new RenderPass(scene, camera);
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(container.clientWidth, container.clientHeight), 
-    1.2,  // Strength: High enough for a visible glow
-    0.4,  // Radius: Natural light spread
-    0.05  // Threshold: Lowered so it definitely catches the blue light
+    1.5,  // Strength
+    0.4,  // Radius
+    0.9   // Threshold: Extremely high to keep the toilet "dark" until LED is ON
   );
 
   const composer = new EffectComposer(renderer);
   composer.addPass(renderScene);
   composer.addPass(bloomPass);
 
-  const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5); 
+  const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0); 
   scene.add(light);
 
   const loader = new GLTFLoader();
   let mixer, actions = {}, ledMesh;
-  const states = { 
-    CoverAction: false, 
-    SeatAction: false, 
-    Bidet: false, 
-    AirventAction: false,
-    "LED_OnAction.003": false
-  };
+  const states = { CoverAction: false, SeatAction: false, Bidet: false, AirventAction: false, "LED_OnAction.003": false };
 
   loader.load(
     'https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_web.glb',
@@ -140,16 +97,16 @@
       const model = gltf.scene;
       model.traverse((child) => {
         if (child.isMesh) {
+          // Force all meshes to start with 0 emission
+          if(child.material) child.material.emissiveIntensity = 0;
+
           if (child.name === "LED_Bulb") { 
             ledMesh = child;
-            // Surgical material fix to isolate the LED
             ledMesh.material = new THREE.MeshStandardMaterial({
               color: 0x000000,
               emissive: new THREE.Color(0x000000),
               emissiveIntensity: 0
             });
-          } else {
-            if(child.material) child.material.emissiveIntensity = 0;
           }
         }
       });
@@ -181,9 +138,9 @@
     if (name === "LED_OnAction.003") {
       if (ledMesh) {
         if (open) {
-          // GOLDILOCKS SCALAR
-          ledMesh.material.emissive.setHex(0x00aaff).multiplyScalar(20); 
-          ledMesh.material.emissiveIntensity = 20; 
+          // ULTRA BRIGHT: Scalar 200 to break the 0.9 threshold gate
+          ledMesh.material.emissive.setHex(0x00aaff).multiplyScalar(200); 
+          ledMesh.material.emissiveIntensity = 200; 
         } else {
           ledMesh.material.emissive.setHex(0x000000); 
           ledMesh.material.emissiveIntensity = 0;
@@ -194,14 +151,8 @@
     const action = actions[name];
     if (!action) return;
     action.paused = false;
-    if (open) {
-      action.reset();
-      action.timeScale = 1;
-      action.play();
-    } else {
-      action.stop();
-      action.reset();
-    }
+    if (open) { action.reset(); action.timeScale = 1; action.play(); } 
+    else { action.stop(); action.reset(); }
   }
 
   document.querySelectorAll('button[data-action]').forEach(btn => {
@@ -211,23 +162,13 @@
       states[key] = !states[key];
       btn.classList.toggle('active', states[key]);
       if (key === 'Bidet') {
-        if (states.Bidet) {
-          toggleAnim('BidetCoverAction', true);
-          setTimeout(() => toggleAnim('BidetAction', true), 500);
-        } else {
-          toggleAnim('BidetAction', false);
-          setTimeout(() => toggleAnim('BidetCoverAction', false), 500);
-        }
-      } else {
-        toggleAnim(key, states[key]);
-      }
+        if (states.Bidet) { toggleAnim('BidetCoverAction', true); setTimeout(() => toggleAnim('BidetAction', true), 500); } 
+        else { toggleAnim('BidetAction', false); setTimeout(() => toggleAnim('BidetCoverAction', false), 500); }
+      } else { toggleAnim(key, states[key]); }
     });
   });
 
-  document.getElementById('arButton').addEventListener('click', () => {
-    document.getElementById('ar-trigger').activateAR();
-  });
-
+  document.getElementById('arButton').addEventListener('click', () => { document.getElementById('ar-trigger').activateAR(); });
   window.addEventListener('resize', () => {
     camera.aspect = container.clientWidth / container.clientHeight;
     camera.updateProjectionMatrix();
@@ -235,6 +176,5 @@
     composer.setSize(container.clientWidth, container.clientHeight);
   });
 </script>
-
 </body>
 </html>
