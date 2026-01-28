@@ -6,71 +6,23 @@
   <title>Icon Smart Toilet</title>
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
   <style>
-    body {
-      margin: 0;
-      background: rgba(20, 48, 86);
-      color: white;
-      font-family: sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      overflow: hidden;
-    }
-
+    body { margin: 0; background: rgba(20, 48, 86); color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow: hidden; }
     h2 { margin: 15px 0; font-weight: 600; }
-
-    #container {
-      width: 100%;
-      max-width: 800px;
-      height: 70vh;
-      background: #1a1a1a;
-      cursor: grab;
-    }
-
+    #container { width: 100%; max-width: 800px; height: 70vh; background: transparent; cursor: grab; }
     #ar-trigger { display: none; }
-
-    .buttons {
-      display: flex;
-      gap: 12px;
-      justify-content: center;
-      margin-top: 8px;
-      padding: 10px;
-      flex-wrap: nowrap;
+    .buttons { 
+      display: grid; 
+      grid-template-columns: repeat(3, 1fr); 
+      gap: 10px; 
+      margin-top: 8px; 
+      padding: 10px; 
+      width: 90%; 
+      max-width: 400px; 
     }
-
-    button {
-      padding: 12px 18px;
-      font-size: 13px;
-      border: none;
-      border-radius: 8px;
-      background: #2e2e2e;
-      color: white;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      white-space: nowrap;
-    }
-
+    button { padding: 12px 18px; font-size: 13px; border: none; border-radius: 8px; background: #2e2e2e; color: white; cursor: pointer; transition: all 0.2s ease; white-space: nowrap; }
     button:hover { background: #444; }
     button.active { background: #4CAF50; }
     #arButton { background: #ffffff; color: #000; font-weight: bold; }
-
-    /* 📱 MOBILE FIX */
-    @media (max-width: 600px) {
-      .buttons {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 8px;
-        width: 100%;
-        max-width: 360px;
-      }
-
-      button {
-        padding: 10px 8px;
-        font-size: 12px;
-      }
-    }
   </style>
 </head>
 <body>
@@ -88,7 +40,7 @@
 
 <div id="container"></div>
 
-<model-viewer id="ar-trigger"
+<model-viewer id="ar-trigger" 
   src="https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_web.glb"
   ios-src="https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.usdz"
   ar ar-modes="scene-viewer quick-look">
@@ -103,10 +55,170 @@
 }
 </script>
 
-<!-- JS untouched -->
 <script type="module">
-  /* your entire JS stays EXACTLY the same */
-</script>
+  import * as THREE from 'three';
+  import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+  import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+  import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+  import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
+  const container = document.getElementById('container');
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(20/255, 48/255, 86/255);
+
+  const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+  camera.position.set(0, 0.8, 2); 
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.toneMapping = THREE.ReinhardToneMapping; 
+  container.appendChild(renderer.domElement);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+
+  const renderScene = new RenderPass(scene, camera);
+  const bloomPass = new UnrealBloomPass(
+    new THREE.Vector2(container.clientWidth, container.clientHeight), 
+    0.4, 0.3, 0.1
+  );
+
+  const composer = new EffectComposer(renderer);
+  composer.addPass(renderScene);
+  composer.addPass(bloomPass);
+
+  const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5); 
+  scene.add(light);
+
+  const loader = new GLTFLoader();
+  let mixer, actions = {}, ledMesh;
+  const states = { 
+    CoverAction: false, 
+    SeatAction: false, 
+    Bidet: false, 
+    AirventAction: false, 
+    "LED_OnAction.003": false 
+  };
+
+  loader.load(
+    'https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_web.glb',
+    (gltf) => {
+      const model = gltf.scene;
+      model.traverse((child) => {
+        if (child.isMesh && child.name === "LED_Bulb") {
+          ledMesh = child;
+          ledMesh.material = new THREE.MeshStandardMaterial({
+            color: 0x000000,
+            emissive: new THREE.Color(0x000000),
+            emissiveIntensity: 0
+          });
+        }
+      });
+
+      const box = new THREE.Box3().setFromObject(model);
+      const center = box.getCenter(new THREE.Vector3());
+      model.position.sub(center); 
+      scene.add(model);
+      controls.target.set(0, 0, 0);
+
+      mixer = new THREE.AnimationMixer(model);
+      gltf.animations.forEach((clip) => {
+        const action = mixer.clipAction(clip);
+        action.setLoop(THREE.LoopOnce);
+        action.clampWhenFinished = true;
+        actions[clip.name] = action;
+      });
+      animate();
+    }
+  );
+
+  const clock = new THREE.Clock();
+  function animate() {
+    requestAnimationFrame(animate);
+    if (mixer) mixer.update(clock.getDelta());
+    controls.update();
+    composer.render();
+  }
+
+  function toggleAnim(name, open) {
+
+    if (name === "LED_OnAction.003") {
+      if (ledMesh) {
+        if (open) {
+          ledMesh.material.emissive.setHex(0xbbeeff).multiplyScalar(15);
+          ledMesh.material.emissiveIntensity = 15;
+        } else {
+          ledMesh.material.emissive.setHex(0x000000);
+          ledMesh.material.emissiveIntensity = 0;
+        }
+      }
+      return;
+    }
+
+    const action = actions[name];
+    if (!action) return;
+
+    action.paused = false;
+
+    if (open) {
+      action.timeScale = 1;
+      action.play();
+    } else {
+      action.timeScale = -1;
+      if (action.time === 0) action.time = action.getClip().duration;
+      action.play();
+    }
+  }
+
+  document.querySelectorAll('button[data-action]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (!mixer) return;
+
+      const key = btn.dataset.action;
+
+      // 🔁 SPECIAL LOGIC: close Seat before Cover
+      if (key === "CoverAction" && states.CoverAction && states.SeatAction) {
+        states.SeatAction = false;
+        document.getElementById("btn-SeatAction").classList.remove("active");
+        toggleAnim("SeatAction", false);
+
+        setTimeout(() => {
+          states.CoverAction = false;
+          btn.classList.remove("active");
+          toggleAnim("CoverAction", false);
+        }, 500);
+        return;
+      }
+
+      states[key] = !states[key];
+      btn.classList.toggle('active', states[key]);
+
+      if (key === 'Bidet') {
+        if (states.Bidet) {
+          toggleAnim('BidetCoverAction', true);
+          setTimeout(() => toggleAnim('BidetAction', true), 500);
+        } else {
+          toggleAnim('BidetAction', false);
+          setTimeout(() => toggleAnim('BidetCoverAction', false), 500);
+        }
+      } else {
+        toggleAnim(key, states[key]);
+      }
+    });
+  });
+
+  document.getElementById('arButton').addEventListener('click', () => {
+    document.getElementById('ar-trigger').activateAR();
+  });
+
+  window.addEventListener('resize', () => {
+    camera.aspect = container.clientWidth / container.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    composer.setSize(container.clientWidth, container.clientHeight);
+  });
+</script>
 </body>
 </html>
