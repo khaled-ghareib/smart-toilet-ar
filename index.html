@@ -119,13 +119,13 @@
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  // SUBTLE BLOOM SETUP
+  // MICRO-GLOW SETUP
   const renderScene = new RenderPass(scene, camera);
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(container.clientWidth, container.clientHeight), 
-    0.3,  // Strength: VASTLY REDUCED for a subtle look
-    0.2,  // Radius: Tighter focus around the bar
-    0.4   // Threshold: Lowered to allow the dim scalar to still glow
+    0.05,  // Strength: Extremely low for a very subtle effect
+    0.05,  // Radius: Very tight, so it doesn't spread
+    0.1    // Threshold: Low enough to catch the dim LED
   );
 
   const composer = new EffectComposer(renderer);
@@ -191,9 +191,9 @@
     if (name === "LED_OnAction.003") {
       if (ledMesh) {
         if (open) {
-          // LOW POWER SCALAR: Just enough to "pulse" without blinding
-          ledMesh.material.emissive.setHex(0x00aaff).multiplyScalar(2); 
-          ledMesh.material.emissiveIntensity = 2; 
+          // DIMMED SCALAR: Just enough to be blue
+          ledMesh.material.emissive.setHex(0x00aaff).multiplyScalar(0.5); 
+          ledMesh.material.emissiveIntensity = 0.5; 
         } else {
           ledMesh.material.emissive.setHex(0x000000); 
           ledMesh.material.emissiveIntensity = 0;
