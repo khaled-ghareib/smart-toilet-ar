@@ -102,6 +102,9 @@
   import * as THREE from 'three';
   import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
   import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+  import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+  import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+  import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
   const container = document.getElementById('container');
   const scene = new THREE.Scene();
@@ -113,10 +116,23 @@
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.setPixelRatio(window.devicePixelRatio);
+  // Optional: Better color handling for emissive glows
+  renderer.toneMapping = THREE.ReinhardToneMapping;
   container.appendChild(renderer.domElement);
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
+
+  // Post-processing setup for the "Glow"
+  const renderScene = new RenderPass(scene, camera);
+  const bloomPass = new UnrealBloomPass(new THREE.Vector2(container.clientWidth, container.clientHeight), 1.5, 0.4, 0.85);
+  bloomPass.threshold = 0; // Ensures the LED_Bulb triggers the glow
+  bloomPass.strength = 1.2; // Adjust this to make the glow stronger or softer
+  bloomPass.radius = 0.5;
+
+  const composer = new EffectComposer(renderer);
+  composer.addPass(renderScene);
+  composer.addPass(bloomPass);
 
   const light = new THREE.HemisphereLight(0xffffff, 0x444444, 3);
   scene.add(light);
@@ -136,11 +152,9 @@
     (gltf) => {
       const model = gltf.scene;
       
-      // Initialize LED_Bulb reference
       model.traverse((child) => {
         if (child.isMesh && child.name === "LED_Bulb") { 
           ledMesh = child;
-          // Ensure it starts in the "Off" state
           ledMesh.material.emissive = new THREE.Color(0x000000); 
           ledMesh.material.emissiveIntensity = 0;
         }
@@ -168,16 +182,15 @@
     requestAnimationFrame(animate);
     if (mixer) mixer.update(clock.getDelta());
     controls.update();
-    renderer.render(scene, camera);
+    composer.render(); // Use composer instead of renderer
   }
 
   function toggleAnim(name, open) {
-    // Direct code control for the LED_Bulb
     if (name === "LED_OnAction.003") {
       if (ledMesh) {
         if (open) {
           ledMesh.material.emissive.setHex(0x00aaff); 
-          ledMesh.material.emissiveIntensity = 50; 
+          ledMesh.material.emissiveIntensity = 20; // High intensity for the bloom pass to "catch"
         } else {
           ledMesh.material.emissive.setHex(0x000000); 
           ledMesh.material.emissiveIntensity = 0;
@@ -232,6 +245,7 @@
     camera.aspect = container.clientWidth / container.clientHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(container.clientWidth, container.clientHeight);
+    composer.setSize(container.clientWidth, container.clientHeight); // Sync composer size
   });
 </script>
 
