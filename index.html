@@ -6,13 +6,12 @@
   <title>Icon Smart Toilet</title>
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
   <style>
-    /* Webpage background stays dark blue */
     body { margin: 0; background: rgba(20, 48, 86); color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow: hidden; }
-    h2 { margin: 15px 0; font-weight: 600; }
     
-    /* Model area set to dark grey */
+    /* Logo styling */
+    .logo { margin: 15px 0; max-width: 200px; height: auto; }
+
     #container { width: 100%; max-width: 800px; height: 70vh; background: #1a1a1a; cursor: grab; border-radius: 12px; overflow: hidden; }
-    
     #ar-trigger { display: none; }
     .buttons { 
       display: grid; 
@@ -31,7 +30,7 @@
 </head>
 <body>
 
-<h2>Icon Smart Toilet</h2>
+<img src="https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/smart_toilet_logo.png" alt="Icon Smart Toilet Logo" class="logo">
 
 <div class="buttons">
   <button id="btn-CoverAction" data-action="CoverAction">Cover</button>
@@ -69,8 +68,6 @@
 
   const container = document.getElementById('container');
   const scene = new THREE.Scene();
-  
-  // Set the 3D scene background to match the dark grey container
   scene.background = new THREE.Color(0x1a1a1a);
 
   const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
