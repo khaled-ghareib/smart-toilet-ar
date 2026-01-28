@@ -71,13 +71,12 @@
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  // REFINED BLOOM: Slightly higher strength (0.4) for a more visible glow
   const renderScene = new RenderPass(scene, camera);
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(container.clientWidth, container.clientHeight), 
-    0.4, // Strength: Nudged up for better visibility
-    0.3, // Radius: Natural spread
-    0.1  // Threshold: Keep it low to catch the soft scalar
+    0.4,
+    0.3,
+    0.1
   );
 
   const composer = new EffectComposer(renderer);
@@ -89,7 +88,13 @@
 
   const loader = new GLTFLoader();
   let mixer, actions = {}, ledMesh;
-  const states = { CoverAction: false, SeatAction: false, Bidet: false, AirventAction: false, "LED_OnAction.003": false };
+  const states = { 
+    CoverAction: false, 
+    SeatAction: false, 
+    Bidet: false, 
+    AirventAction: false, 
+    "LED_OnAction.003": false 
+  };
 
   loader.load(
     'https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_web.glb',
@@ -104,16 +109,16 @@
               emissive: new THREE.Color(0x000000),
               emissiveIntensity: 0
             });
-          } else if(child.material) {
-            child.material.emissiveIntensity = 0; 
           }
         }
       });
+
       const box = new THREE.Box3().setFromObject(model);
       const center = box.getCenter(new THREE.Vector3());
       model.position.sub(center); 
       scene.add(model);
       controls.target.set(0, 0, 0);
+
       mixer = new THREE.AnimationMixer(model);
       gltf.animations.forEach((clip) => {
         const action = mixer.clipAction(clip);
@@ -130,28 +135,39 @@
     requestAnimationFrame(animate);
     if (mixer) mixer.update(clock.getDelta());
     controls.update();
-    composer.render(); 
+    composer.render();
   }
 
   function toggleAnim(name, open) {
+
+    // 🔒 LED stays emissive-only (unchanged)
     if (name === "LED_OnAction.003") {
       if (ledMesh) {
         if (open) {
-          // BRIGHTER & WHITER: shifted hex to 0xbbeeff and scalar to 15
-          ledMesh.material.emissive.setHex(0xbbeeff).multiplyScalar(15); 
-          ledMesh.material.emissiveIntensity = 15; 
+          ledMesh.material.emissive.setHex(0xbbeeff).multiplyScalar(15);
+          ledMesh.material.emissiveIntensity = 15;
         } else {
-          ledMesh.material.emissive.setHex(0x000000); 
+          ledMesh.material.emissive.setHex(0x000000);
           ledMesh.material.emissiveIntensity = 0;
         }
       }
       return;
     }
+
+    // 🔁 ALL OTHER animations reverse correctly
     const action = actions[name];
     if (!action) return;
+
     action.paused = false;
-    if (open) { action.reset(); action.timeScale = 1; action.play(); } 
-    else { action.stop(); action.reset(); }
+
+    if (open) {
+      action.timeScale = 1;
+      action.play();
+    } else {
+      action.timeScale = -1;
+      if (action.time === 0) action.time = action.getClip().duration;
+      action.play();
+    }
   }
 
   document.querySelectorAll('button[data-action]').forEach(btn => {
@@ -160,14 +176,25 @@
       const key = btn.dataset.action;
       states[key] = !states[key];
       btn.classList.toggle('active', states[key]);
+
       if (key === 'Bidet') {
-        if (states.Bidet) { toggleAnim('BidetCoverAction', true); setTimeout(() => toggleAnim('BidetAction', true), 500); } 
-        else { toggleAnim('BidetAction', false); setTimeout(() => toggleAnim('BidetCoverAction', false), 500); }
-      } else { toggleAnim(key, states[key]); }
+        if (states.Bidet) {
+          toggleAnim('BidetCoverAction', true);
+          setTimeout(() => toggleAnim('BidetAction', true), 500);
+        } else {
+          toggleAnim('BidetAction', false);
+          setTimeout(() => toggleAnim('BidetCoverAction', false), 500);
+        }
+      } else {
+        toggleAnim(key, states[key]);
+      }
     });
   });
 
-  document.getElementById('arButton').addEventListener('click', () => { document.getElementById('ar-trigger').activateAR(); });
+  document.getElementById('arButton').addEventListener('click', () => {
+    document.getElementById('ar-trigger').activateAR();
+  });
+
   window.addEventListener('resize', () => {
     camera.aspect = container.clientWidth / container.clientHeight;
     camera.updateProjectionMatrix();
