@@ -65,26 +65,26 @@
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.toneMapping = THREE.NoToneMapping; 
+  renderer.toneMapping = THREE.ReinhardToneMapping; // Switched to Reinhard for smoother light falloff
   container.appendChild(renderer.domElement);
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  // PREMIUM SUBTLE BLOOM
+  // LUXURY SOFT GLOW SETUP
   const renderScene = new RenderPass(scene, camera);
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(container.clientWidth, container.clientHeight), 
-    0.4,  // Strength: Very low to stop the "blinding" effect
-    0.3,  // Radius
-    0.5   // Threshold: Raised to ignore porcelain reflections but catch the LED
+    0.15, // Strength: Very low for a subtle internal glow
+    0.2,  // Radius: Tight focus
+    0.1   // Threshold: Low to catch the subtle scalar
   );
 
   const composer = new EffectComposer(renderer);
   composer.addPass(renderScene);
   composer.addPass(bloomPass);
 
-  const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2); 
+  const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5); 
   scene.add(light);
 
   const loader = new GLTFLoader();
@@ -100,12 +100,11 @@
           if (child.name === "LED_Bulb") { 
             ledMesh = child;
             ledMesh.material = new THREE.MeshStandardMaterial({
-              color: 0x111111,
+              color: 0x000000,
               emissive: new THREE.Color(0x000000),
               emissiveIntensity: 0
             });
           } else if(child.material) {
-            // Ensure nothing else glows on load
             child.material.emissiveIntensity = 0; 
           }
         }
@@ -138,9 +137,9 @@
     if (name === "LED_OnAction.003") {
       if (ledMesh) {
         if (open) {
-          // ULTRA LOW INTENSITY: multiplyScalar(1.5) provides a faint blue glow
-          ledMesh.material.emissive.setHex(0x00aaff).multiplyScalar(1.5); 
-          ledMesh.material.emissiveIntensity = 1.5; 
+          // SOFT INTERNAL SCALAR: multiplyScalar(5) provides a deep blue without washing out
+          ledMesh.material.emissive.setHex(0x00aaff).multiplyScalar(5); 
+          ledMesh.material.emissiveIntensity = 5; 
         } else {
           ledMesh.material.emissive.setHex(0x000000); 
           ledMesh.material.emissiveIntensity = 0;
