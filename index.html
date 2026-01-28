@@ -76,10 +76,7 @@
   <button id="btn-SeatAction" data-action="SeatAction">Seat</button>
   <button id="btn-Bidet" data-action="Bidet">Bidet</button>
   <button id="btn-AirventAction" data-action="AirventAction">Air Vent</button>
-
-  <!-- ✅ NEW BUTTON -->
-  <button id="btn-LED" data-action="LED_On">LED</button>
-
+  <button id="btn-LED" data-action="LED_OnAction">LED</button>
   <button id="arButton">View in AR</button>
 </div>
 
@@ -126,14 +123,12 @@
 
   const loader = new GLTFLoader();
   let mixer, actions = {};
-
-  /* ✅ ONLY ADDITION: LED state */
   const states = { 
     CoverAction: false, 
     SeatAction: false, 
     Bidet: false, 
     AirventAction: false,
-    LED_On: false
+    LED_OnAction: false
   };
 
   loader.load(
@@ -182,7 +177,6 @@
   document.querySelectorAll('button[data-action]').forEach(btn => {
     btn.addEventListener('click', () => {
       if (!mixer) return;
-
       const key = btn.dataset.action;
       states[key] = !states[key];
       btn.classList.toggle('active', states[key]);
@@ -196,7 +190,6 @@
           setTimeout(() => toggleAnim('BidetCoverAction', false), 500);
         }
       } else {
-        /* ✅ LED_On handled here naturally */
         toggleAnim(key, states[key]);
       }
     });
