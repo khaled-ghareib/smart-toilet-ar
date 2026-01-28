@@ -116,26 +116,25 @@
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.toneMapping = THREE.NoToneMapping; // Required to allow "over-bright" emissive colors
+  renderer.toneMapping = THREE.NoToneMapping; 
   container.appendChild(renderer.domElement);
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  // Refined Post-processing
+  // REFINED BLOOM: Lowered strength for a subtler glow
   const renderScene = new RenderPass(scene, camera);
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(container.clientWidth, container.clientHeight), 
-    1.5,  // Strength
-    0.4,  // Radius
-    0.85  // Threshold: High value ensures normal lighting doesn't cause a glow
+    0.8,  // Strength: Lowered from 1.5
+    0.3,  // Radius: Tighter glow
+    0.5   // Threshold: Lowered slightly from 0.85 to catch the dimmer light
   );
 
   const composer = new EffectComposer(renderer);
   composer.addPass(renderScene);
   composer.addPass(bloomPass);
 
-  // Muted ambient light for a luxury feel
   const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2); 
   scene.add(light);
 
@@ -156,17 +155,14 @@
       
       model.traverse((child) => {
         if (child.isMesh) {
-          // Identify the specific LED mesh
           if (child.name === "LED_Bulb") { 
             ledMesh = child;
-            // Fresh material to prevent shared glowing
             ledMesh.material = new THREE.MeshStandardMaterial({
               color: 0x111111,
               emissive: new THREE.Color(0x000000),
               emissiveIntensity: 0
             });
           } else {
-            // Safety: disable emission on all other parts
             if(child.material) child.material.emissiveIntensity = 0;
           }
         }
@@ -201,9 +197,9 @@
     if (name === "LED_OnAction.003") {
       if (ledMesh) {
         if (open) {
-          // multiplyScalar(100) forces the color to break the 0.85 threshold
-          ledMesh.material.emissive.setHex(0x00aaff).multiplyScalar(100); 
-          ledMesh.material.emissiveIntensity = 100; 
+          // DIMMED SCALAR: Lowered from 100 to 15
+          ledMesh.material.emissive.setHex(0x00aaff).multiplyScalar(15); 
+          ledMesh.material.emissiveIntensity = 15; 
         } else {
           ledMesh.material.emissive.setHex(0x000000); 
           ledMesh.material.emissiveIntensity = 0;
