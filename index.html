@@ -74,9 +74,7 @@
   const renderScene = new RenderPass(scene, camera);
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(container.clientWidth, container.clientHeight), 
-    0.4,
-    0.3,
-    0.1
+    0.4, 0.3, 0.1
   );
 
   const composer = new EffectComposer(renderer);
@@ -101,15 +99,13 @@
     (gltf) => {
       const model = gltf.scene;
       model.traverse((child) => {
-        if (child.isMesh) {
-          if (child.name === "LED_Bulb") { 
-            ledMesh = child;
-            ledMesh.material = new THREE.MeshStandardMaterial({
-              color: 0x000000,
-              emissive: new THREE.Color(0x000000),
-              emissiveIntensity: 0
-            });
-          }
+        if (child.isMesh && child.name === "LED_Bulb") {
+          ledMesh = child;
+          ledMesh.material = new THREE.MeshStandardMaterial({
+            color: 0x000000,
+            emissive: new THREE.Color(0x000000),
+            emissiveIntensity: 0
+          });
         }
       });
 
@@ -140,7 +136,6 @@
 
   function toggleAnim(name, open) {
 
-    // 🔒 LED stays emissive-only (unchanged)
     if (name === "LED_OnAction.003") {
       if (ledMesh) {
         if (open) {
@@ -154,7 +149,6 @@
       return;
     }
 
-    // 🔁 ALL OTHER animations reverse correctly
     const action = actions[name];
     if (!action) return;
 
@@ -173,7 +167,23 @@
   document.querySelectorAll('button[data-action]').forEach(btn => {
     btn.addEventListener('click', () => {
       if (!mixer) return;
+
       const key = btn.dataset.action;
+
+      // 🔁 SPECIAL LOGIC: close Seat before Cover
+      if (key === "CoverAction" && states.CoverAction && states.SeatAction) {
+        states.SeatAction = false;
+        document.getElementById("btn-SeatAction").classList.remove("active");
+        toggleAnim("SeatAction", false);
+
+        setTimeout(() => {
+          states.CoverAction = false;
+          btn.classList.remove("active");
+          toggleAnim("CoverAction", false);
+        }, 500);
+        return;
+      }
+
       states[key] = !states[key];
       btn.classList.toggle('active', states[key]);
 
