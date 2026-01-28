@@ -116,19 +116,22 @@
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.setPixelRatio(window.devicePixelRatio);
-  // Optional: Better color handling for emissive glows
-  renderer.toneMapping = THREE.ReinhardToneMapping;
+  
+  // Set to NoToneMapping so high emissive values can trigger bloom
+  renderer.toneMapping = THREE.NoToneMapping; 
   container.appendChild(renderer.domElement);
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  // Post-processing setup for the "Glow"
+  // Setup EffectComposer for the Glow
   const renderScene = new RenderPass(scene, camera);
-  const bloomPass = new UnrealBloomPass(new THREE.Vector2(container.clientWidth, container.clientHeight), 1.5, 0.4, 0.85);
-  bloomPass.threshold = 0; // Ensures the LED_Bulb triggers the glow
-  bloomPass.strength = 1.2; // Adjust this to make the glow stronger or softer
-  bloomPass.radius = 0.5;
+  const bloomPass = new UnrealBloomPass(
+    new THREE.Vector2(container.clientWidth, container.clientHeight), 
+    2.5,  // Strength: cranked up to 2.5 for a visible glow
+    0.4,  // Radius
+    0.0   // Threshold: 0 ensures any color data triggers the glow
+  );
 
   const composer = new EffectComposer(renderer);
   composer.addPass(renderScene);
@@ -153,8 +156,10 @@
       const model = gltf.scene;
       
       model.traverse((child) => {
+        // Targets your renamed object
         if (child.isMesh && child.name === "LED_Bulb") { 
           ledMesh = child;
+          ledMesh.material = ledMesh.material.clone(); // Clone to prevent lighting other parts
           ledMesh.material.emissive = new THREE.Color(0x000000); 
           ledMesh.material.emissiveIntensity = 0;
         }
@@ -182,15 +187,16 @@
     requestAnimationFrame(animate);
     if (mixer) mixer.update(clock.getDelta());
     controls.update();
-    composer.render(); // Use composer instead of renderer
+    composer.render(); // Always render through the composer
   }
 
   function toggleAnim(name, open) {
     if (name === "LED_OnAction.003") {
       if (ledMesh) {
         if (open) {
-          ledMesh.material.emissive.setHex(0x00aaff); 
-          ledMesh.material.emissiveIntensity = 20; // High intensity for the bloom pass to "catch"
+          // multiplyScalar pushes the color into "Glow" territory
+          ledMesh.material.emissive.setHex(0x00aaff).multiplyScalar(50); 
+          ledMesh.material.emissiveIntensity = 50; 
         } else {
           ledMesh.material.emissive.setHex(0x000000); 
           ledMesh.material.emissiveIntensity = 0;
@@ -245,7 +251,7 @@
     camera.aspect = container.clientWidth / container.clientHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(container.clientWidth, container.clientHeight);
-    composer.setSize(container.clientWidth, container.clientHeight); // Sync composer size
+    composer.setSize(container.clientWidth, container.clientHeight);
   });
 </script>
 
