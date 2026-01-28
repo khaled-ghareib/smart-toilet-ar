@@ -21,10 +21,7 @@
       overflow: hidden;
     }
 
-    h2 { 
-      margin: 15px 0; 
-      font-weight: 600; 
-    }
+    h2 { margin: 15px 0; font-weight: 600; }
 
     #container { 
       width: 100%; 
@@ -122,20 +119,20 @@
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  // REFINED BLOOM: Lowered strength for a subtler glow
+  // SUBTLE BLOOM SETUP
   const renderScene = new RenderPass(scene, camera);
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(container.clientWidth, container.clientHeight), 
-    0.8,  // Strength: Lowered from 1.5
-    0.3,  // Radius: Tighter glow
-    0.5   // Threshold: Lowered slightly from 0.85 to catch the dimmer light
+    0.3,  // Strength: VASTLY REDUCED for a subtle look
+    0.2,  // Radius: Tighter focus around the bar
+    0.4   // Threshold: Lowered to allow the dim scalar to still glow
   );
 
   const composer = new EffectComposer(renderer);
   composer.addPass(renderScene);
   composer.addPass(bloomPass);
 
-  const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2); 
+  const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5); 
   scene.add(light);
 
   const loader = new GLTFLoader();
@@ -152,13 +149,12 @@
     'https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_web.glb',
     (gltf) => {
       const model = gltf.scene;
-      
       model.traverse((child) => {
         if (child.isMesh) {
           if (child.name === "LED_Bulb") { 
             ledMesh = child;
             ledMesh.material = new THREE.MeshStandardMaterial({
-              color: 0x111111,
+              color: 0x000000,
               emissive: new THREE.Color(0x000000),
               emissiveIntensity: 0
             });
@@ -167,13 +163,11 @@
           }
         }
       });
-
       const box = new THREE.Box3().setFromObject(model);
       const center = box.getCenter(new THREE.Vector3());
       model.position.sub(center); 
       scene.add(model);
       controls.target.set(0, 0, 0);
-      
       mixer = new THREE.AnimationMixer(model);
       gltf.animations.forEach((clip) => {
         const action = mixer.clipAction(clip);
@@ -197,9 +191,9 @@
     if (name === "LED_OnAction.003") {
       if (ledMesh) {
         if (open) {
-          // DIMMED SCALAR: Lowered from 100 to 15
-          ledMesh.material.emissive.setHex(0x00aaff).multiplyScalar(15); 
-          ledMesh.material.emissiveIntensity = 15; 
+          // LOW POWER SCALAR: Just enough to "pulse" without blinding
+          ledMesh.material.emissive.setHex(0x00aaff).multiplyScalar(2); 
+          ledMesh.material.emissiveIntensity = 2; 
         } else {
           ledMesh.material.emissive.setHex(0x000000); 
           ledMesh.material.emissiveIntensity = 0;
@@ -207,12 +201,9 @@
       }
       return;
     }
-
     const action = actions[name];
     if (!action) return;
-
     action.paused = false;
-
     if (open) {
       action.reset();
       action.timeScale = 1;
@@ -226,11 +217,9 @@
   document.querySelectorAll('button[data-action]').forEach(btn => {
     btn.addEventListener('click', () => {
       if (!mixer) return;
-
       const key = btn.dataset.action;
       states[key] = !states[key];
       btn.classList.toggle('active', states[key]);
-
       if (key === 'Bidet') {
         if (states.Bidet) {
           toggleAnim('BidetCoverAction', true);
@@ -239,8 +228,7 @@
           toggleAnim('BidetAction', false);
           setTimeout(() => toggleAnim('BidetCoverAction', false), 500);
         }
-      } 
-      else {
+      } else {
         toggleAnim(key, states[key]);
       }
     });
