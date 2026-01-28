@@ -33,7 +33,7 @@
 <div id="container"></div>
 
 <model-viewer id="ar-trigger" 
-  src="https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.glb"
+  src="https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_web.glb"
   ios-src="https://raw.githubusercontent.com/khaled-ghareib/smart-toilet-ar/main/toilet_full_active.usdz"
   ar ar-modes="scene-viewer quick-look">
 </model-viewer>
@@ -71,13 +71,13 @@
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  // SOFT BLOOM: Strength lowered to 0.4 to prevent blinding
+  // PREMIUM SUBTLE BLOOM
   const renderScene = new RenderPass(scene, camera);
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(container.clientWidth, container.clientHeight), 
-    0.4,  // Strength: VASTLY lowered from previous blinding versions
-    0.3,  // Radius: Tighter glow
-    0.2   // Threshold: Balanced to catch the blue without catching the toilet white
+    0.4,  // Strength: Very low to stop the "blinding" effect
+    0.3,  // Radius
+    0.5   // Threshold: Raised to ignore porcelain reflections but catch the LED
   );
 
   const composer = new EffectComposer(renderer);
@@ -100,12 +100,13 @@
           if (child.name === "LED_Bulb") { 
             ledMesh = child;
             ledMesh.material = new THREE.MeshStandardMaterial({
-              color: 0x000000,
+              color: 0x111111,
               emissive: new THREE.Color(0x000000),
               emissiveIntensity: 0
             });
           } else if(child.material) {
-            child.material.emissiveIntensity = 0; // Global safety
+            // Ensure nothing else glows on load
+            child.material.emissiveIntensity = 0; 
           }
         }
       });
@@ -137,9 +138,9 @@
     if (name === "LED_OnAction.003") {
       if (ledMesh) {
         if (open) {
-          // SOFT INTENSITY: Scalar of 10 is the "sweet spot" for this threshold
-          ledMesh.material.emissive.setHex(0x00aaff).multiplyScalar(10); 
-          ledMesh.material.emissiveIntensity = 10; 
+          // ULTRA LOW INTENSITY: multiplyScalar(1.5) provides a faint blue glow
+          ledMesh.material.emissive.setHex(0x00aaff).multiplyScalar(1.5); 
+          ledMesh.material.emissiveIntensity = 1.5; 
         } else {
           ledMesh.material.emissive.setHex(0x000000); 
           ledMesh.material.emissiveIntensity = 0;
