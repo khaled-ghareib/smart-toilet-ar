@@ -108,13 +108,13 @@
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  // BALANCED BLOOM SETUP
+  // BALANCED BLOOM SETTINGS
   const renderScene = new RenderPass(scene, camera);
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(container.clientWidth, container.clientHeight), 
-    0.6,  // Strength: Subtle but visible
-    0.3,  // Radius
-    0.1   // Threshold: Catching the blue light
+    1.2,  // Strength: High enough for a visible glow
+    0.4,  // Radius: Natural light spread
+    0.05  // Threshold: Lowered so it definitely catches the blue light
   );
 
   const composer = new EffectComposer(renderer);
@@ -142,6 +142,7 @@
         if (child.isMesh) {
           if (child.name === "LED_Bulb") { 
             ledMesh = child;
+            // Surgical material fix to isolate the LED
             ledMesh.material = new THREE.MeshStandardMaterial({
               color: 0x000000,
               emissive: new THREE.Color(0x000000),
@@ -180,9 +181,9 @@
     if (name === "LED_OnAction.003") {
       if (ledMesh) {
         if (open) {
-          // BALANCED SCALAR
-          ledMesh.material.emissive.setHex(0x00aaff).multiplyScalar(5); 
-          ledMesh.material.emissiveIntensity = 5; 
+          // GOLDILOCKS SCALAR
+          ledMesh.material.emissive.setHex(0x00aaff).multiplyScalar(20); 
+          ledMesh.material.emissiveIntensity = 20; 
         } else {
           ledMesh.material.emissive.setHex(0x000000); 
           ledMesh.material.emissiveIntensity = 0;
