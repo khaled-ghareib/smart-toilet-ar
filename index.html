@@ -66,8 +66,9 @@
   const container = document.getElementById('container');
   const scene = new THREE.Scene();
   
-  // Set the background color to match rgba(20, 48, 86) exactly
-  scene.background = new THREE.Color(20/255, 48/255, 86/255);
+  // Set background to the exact color and force it to ignore tone mapping
+  const bgColor = new THREE.Color(20/255, 48/255, 86/255);
+  scene.background = bgColor;
 
   const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
   camera.position.set(0, 0.8, 2); 
@@ -75,7 +76,11 @@
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.toneMapping = THREE.ReinhardToneMapping; 
+  
+  // These settings ensure the color you picked remains accurate
+  renderer.toneMapping = THREE.NoToneMapping; 
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  
   container.appendChild(renderer.domElement);
 
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -145,7 +150,6 @@
   }
 
   function toggleAnim(name, open) {
-
     if (name === "LED_OnAction.003") {
       if (ledMesh) {
         if (open) {
@@ -161,9 +165,7 @@
 
     const action = actions[name];
     if (!action) return;
-
     action.paused = false;
-
     if (open) {
       action.timeScale = 1;
       action.play();
@@ -177,14 +179,11 @@
   document.querySelectorAll('button[data-action]').forEach(btn => {
     btn.addEventListener('click', () => {
       if (!mixer) return;
-
       const key = btn.dataset.action;
-
       if (key === "CoverAction" && states.CoverAction && states.SeatAction) {
         states.SeatAction = false;
         document.getElementById("btn-SeatAction").classList.remove("active");
         toggleAnim("SeatAction", false);
-
         setTimeout(() => {
           states.CoverAction = false;
           btn.classList.remove("active");
@@ -192,10 +191,8 @@
         }, 500);
         return;
       }
-
       states[key] = !states[key];
       btn.classList.toggle('active', states[key]);
-
       if (key === 'Bidet') {
         if (states.Bidet) {
           toggleAnim('BidetCoverAction', true);
