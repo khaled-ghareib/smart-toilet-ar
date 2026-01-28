@@ -116,21 +116,19 @@
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.setPixelRatio(window.devicePixelRatio);
-  
-  // Set to NoToneMapping so high emissive values can trigger bloom
-  renderer.toneMapping = THREE.NoToneMapping; 
+  renderer.toneMapping = THREE.NoToneMapping; // Required for emissive bloom to work
   container.appendChild(renderer.domElement);
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  // Setup EffectComposer for the Glow
+  // Setup Post-processing
   const renderScene = new RenderPass(scene, camera);
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(container.clientWidth, container.clientHeight), 
-    2.5,  // Strength: cranked up to 2.5 for a visible glow
+    1.0,  // Strength: Adjusted to prevent white-out
     0.4,  // Radius
-    0.0   // Threshold: 0 ensures any color data triggers the glow
+    0.1   // Threshold: Only very bright items will glow
   );
 
   const composer = new EffectComposer(renderer);
@@ -156,12 +154,14 @@
       const model = gltf.scene;
       
       model.traverse((child) => {
-        // Targets your renamed object
         if (child.isMesh && child.name === "LED_Bulb") { 
           ledMesh = child;
-          ledMesh.material = ledMesh.material.clone(); // Clone to prevent lighting other parts
-          ledMesh.material.emissive = new THREE.Color(0x000000); 
-          ledMesh.material.emissiveIntensity = 0;
+          // Create a unique material to ensure only the bulb glows
+          ledMesh.material = new THREE.MeshStandardMaterial({
+            color: 0x000000,
+            emissive: new THREE.Color(0x000000),
+            emissiveIntensity: 0
+          });
         }
       });
 
@@ -194,9 +194,9 @@
     if (name === "LED_OnAction.003") {
       if (ledMesh) {
         if (open) {
-          // multiplyScalar pushes the color into "Glow" territory
-          ledMesh.material.emissive.setHex(0x00aaff).multiplyScalar(50); 
-          ledMesh.material.emissiveIntensity = 50; 
+          // multiplyScalar(10) provides a blue glow without turning white
+          ledMesh.material.emissive.setHex(0x00aaff).multiplyScalar(10); 
+          ledMesh.material.emissiveIntensity = 20; 
         } else {
           ledMesh.material.emissive.setHex(0x000000); 
           ledMesh.material.emissiveIntensity = 0;
