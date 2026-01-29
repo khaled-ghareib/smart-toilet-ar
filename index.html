@@ -2,30 +2,34 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Icon Smart Toilet</title>
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
   <style>
     body { margin: 0; background: rgba(20, 48, 86); color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow: hidden; }
     
-    .top-logo { margin: 15px 0; max-width: 180px; height: auto; }
+    /* Top Logo - slightly scaled down for vertical space */
+    .top-logo { margin: 10px 0; max-width: 150px; height: auto; }
 
-    #container { width: 100%; max-width: 800px; height: 70vh; background: #1a1a1a; cursor: grab; border-radius: 12px; overflow: hidden; }
+    /* Reduced height to 50vh to ensure bottom logo is visible without scrolling */
+    #container { width: 95%; max-width: 800px; height: 50vh; background: #1a1a1a; cursor: grab; border-radius: 12px; overflow: hidden; }
     
-    .logo { margin: 15px 0; max-width: 200px; height: auto; }
+    /* Bottom Logo - scaled down for fit */
+    .logo { margin: 10px 0; max-width: 160px; height: auto; }
 
     #ar-trigger { display: none; }
     .buttons { 
       display: grid; 
       grid-template-columns: repeat(3, 1fr); 
-      gap: 10px; 
-      margin-top: 8px; 
-      padding: 10px; 
+      gap: 8px; 
+      margin-top: 5px; 
+      margin-bottom: 5px;
+      padding: 5px; 
       width: 90%; 
       max-width: 400px; 
     }
-    /* Updated button color to #5b6f8a with white text */
-    button { padding: 12px 18px; font-size: 13px; border: none; border-radius: 8px; background: #5b6f8a; color: white; cursor: pointer; transition: all 0.2s ease; white-space: nowrap; }
+    /* Tighter padding for mobile scaling */
+    button { padding: 10px 12px; font-size: 12px; border: none; border-radius: 8px; background: #5b6f8a; color: white; cursor: pointer; transition: all 0.2s ease; white-space: nowrap; }
     button:hover { background: #444; }
     button.active { background: #4CAF50; }
     #arButton { background: #ffffff; color: #000; font-weight: bold; }
